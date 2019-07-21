@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "dependencies": {
+    "@iconify/tools": "^1.3.5",
+    "@svgdotjs/svg.js": "^3.0.13",
+    "commander": "^2.20.0",
+    "jsdom": "^15.1.1",
+    "svgdom": "0.0.20",
+    "svgson": "^4.0.0"
+  }
+}
