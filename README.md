@@ -2,6 +2,16 @@
 
 This is a node/web based tool to inspect the train line data from 国土数値情報 (Japan's National Land Information). The data is not included, so follow the instructions below to download and extract to the `data/` folder.
 
+```
+# Expected files extracted
+
+data/N02-18_GML/KS-META-N02-18.xml
+data/N02-18_GML/N02-18.xml
+data/N02-18_GML/N02-18_RailroadSection.geojson
+data/N02-18_GML/N02-18_Station.geojson
+
+```
+
 After extracting the data, build and run.
 
 ```
@@ -10,6 +20,8 @@ npm run start
 
 # open up http://localhost:4000/
 ```
+
+The inspect simply displays the train line that was selected in SVG, scaled to a fixed width.
 
 ## Downloading the data
 
