@@ -1,5 +1,16 @@
 # Tokyo Trains Data
 
+This is a node/web based tool to inspect the train line data from 国土数値情報 (Japan's National Land Information). The data is not included, so follow the instructions below to download and extract to the `data/` folder.
+
+After extracting the data, build and run.
+
+```
+npm install
+npm run start 
+
+# open up http://localhost:4000/
+```
+
 ## Downloading the data
 
 1. Visit the [Japan GIS Homepage](http://nlftp.mlit.go.jp/ksj/index.html)
