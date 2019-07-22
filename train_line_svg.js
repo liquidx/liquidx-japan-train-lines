@@ -1,27 +1,10 @@
-const fs = require('fs');
-const process = require('process');
-const commander = require('commander');
 
-let line_names = (collections) => {
-  let lines = {};
-  for (var feature of collections.features) {
-    let line_name = feature.properties['N02_003'];
-    let company_name = feature.properties['N02_004'];
-    if (!lines[company_name]) {
-      lines[company_name] = {}
-    }
-
-    lines[company_name][line_name] = 1;
-  }
-  return lines;
-};
-
-let segments_for_line = (collections, line_name_pattern, company_name_pattern) => {
+let segments_for_line = (geojson, line_name_pattern, company_name_pattern) => {
   let segments = [];
   let line_name_re = new RegExp(line_name_pattern, 'i');
   let company_name_re = new RegExp(company_name_pattern, 'i');
 
-  for (var feature of collections.features) {
+  for (var feature of geojson.features) {
     let line_name = feature.properties['N02_003'];
     let company_name = feature.properties['N02_004'];
     if (!line_name_pattern || line_name_re.test(line_name)) {
@@ -34,7 +17,9 @@ let segments_for_line = (collections, line_name_pattern, company_name_pattern) =
   return segments;
 };
 
-let svg_from_segments = (segments) => {
+let svg_from_segments = (geojson, line_name_pattern, company_name_pattern) => {
+  let segments = segments_for_line(geojson, line_name_pattern, company_name_pattern);
+
   let min_x, min_y, max_x, max_y;
   for (var i = 0; i < segments.length; i++) {
     let coordinates = segments[i]['geometry']['coordinates'];
@@ -78,43 +63,4 @@ let svg_from_segments = (segments) => {
   return svg_string;
 };
 
-
-
-
-let main = () => {
-  const program = new commander.Command();
-
-  program
-    .version('1.0')
-    .option('--show-lines', 'Output all lines')
-    .option('-l, --line <line_name>', 'Line', '東横線')
-    .option('-o, --output <output>', 'Output');
-
-  program.parse(process.argv);
-
-  fs.readFile('data-raw/N02-18_GML/N02-18_RailroadSection.geojson', (err, data) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-
-    const collections = JSON.parse(data)
-    if (!collections) {
-      console.error('Unable to parse');
-      return;
-    }
-
-    if (program.showLines) {
-      console.log(line_names(collections));
-      return;
-    }
-
-
-    const segments = segments_for_line(collections, program.line);
-    console.log(`Segments: ${segments.length}`);
-    const svg_path = svg_from_segments(segments);
-    fs.writeFileSync(program.output, svg_path);
-  });
-};
-
-main();
+module.exports = svg_from_segments;
