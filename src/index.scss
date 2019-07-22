@@ -1,0 +1,47 @@
+* {
+  box-sizing: border-box; 
+}
+
+body {
+  background: rgba(50, 50, 50, 1);
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+#page {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+#controls {
+  position: absolute;
+  padding: 10px;
+  width: 20vw;
+  height: 100vh;
+  background-color: rgba(200, 200, 200, 1);
+  overflow-y: scroll;
+}
+
+#svg-viewer {
+  flex: 1 1 auto;
+  order: 2;
+  padding: 10px;
+  margin-left: 25vw;
+}
+
+a.company, a.line {
+  display: block;
+  color: rgba(33, 33, 33, 1);
+}
+
+a.company:visited, a.line:visited {
+  color: rgba(33, 33, 33, 1);
+}
+
+a.line {
+  margin-left: 20px;
+}

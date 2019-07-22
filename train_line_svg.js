@@ -7,8 +7,8 @@ let segments_for_line = (geojson, line_name_pattern, company_name_pattern) => {
   for (var feature of geojson.features) {
     let line_name = feature.properties['N02_003'];
     let company_name = feature.properties['N02_004'];
-    if (!line_name_pattern || line_name_re.test(line_name)) {
-      //if (!line_name_pattern || line_name == line_name_pattern) {
+    //if (!line_name_pattern || line_name_re.test(line_name)) {
+    if (!line_name_pattern || line_name == line_name_pattern) {
       if (!company_name_pattern || company_name_re.test(company_name)) {
         segments.push(feature);
       }
