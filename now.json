@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "liquidx-gis",
+  "builds": [
+    { "src": "data/**/*", "use": "@now/static" },
+    { "src": "config/**/*", "use": "@now/static" },
+    { "src": "public/*", "use": "@now/static" }
+  ],
+  "routes": [
+    { "src": "/", "dest": "public/index.html" },
+    { "src": "/index.js", "dest": "public/index.js" },
+    { "src": "/data/(.*)", "dest": "data/$1" },
+    { "src": "/config/(.*)", "dest": "config/$1" }
+
+  ]
+}
