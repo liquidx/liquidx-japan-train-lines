@@ -34,11 +34,10 @@ let create_controls = () => {
   for (var company of companies) {
     var d = document.createElement('a');
     d.setAttribute('class', 'company');
-    d.setAttribute('href', '#');
+    d.setAttribute('href', `#${company}`);
     d.setAttribute('data-company', company);
     d.appendChild(document.createTextNode(company));
     d.addEventListener('click', (e) => {
-      e.preventDefault();
       let element = e.target;
       let company_name = element.getAttribute('data-company');
       load_train_line_svg(company_name, null);
@@ -50,12 +49,11 @@ let create_controls = () => {
     for (var line of lines) {
       var l = document.createElement('a');
       l.setAttribute('class', 'line');
-      l.setAttribute('href', '#');
+      l.setAttribute('href', `#${company}/${line}`);
       l.setAttribute('data-line', line);
       l.setAttribute('data-company', company);
       l.appendChild(document.createTextNode(line));
       l.addEventListener('click', (e) =>{
-        e.preventDefault();
         let element = e.target;
         let line_name = element.getAttribute('data-line');
         let company_name = element.getAttribute('data-company');
@@ -78,7 +76,21 @@ let main = () => {
         geojson_lines = json;
         all_lines = train_lines(json);
         create_controls();
-        load_train_line_svg('東日本旅客鉄道', '山手線');
+        let company = '東日本旅客鉄道';
+        let line = '山手線';
+        if (document.location.hash) {
+          let path = document.location.hash.replace('#', '').split('/');
+          if (path.length == 1) {
+            company = decodeURIComponent(path[0]);
+            line = null;
+          }
+          if (path.length == 2) {
+            company = decodeURIComponent(path[0]);
+            line = decodeURIComponent(path[1]);
+          }
+        }
+        console.log(company, line);
+        load_train_line_svg(company, line);
       });
   });
 };
