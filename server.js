@@ -8,6 +8,7 @@ const config = require('./webpack.config.js');
 const compiler = webpack(config);
 
 app.use('/data', express.static('data'));
+app.use('/config', express.static('config'));
 
 app.use(webpackDevMiddleware(compiler, {
   publicPath: config.output.publicPath

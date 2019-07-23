@@ -4,18 +4,32 @@ import './index.scss';
 import train_lines from '../train_lines';
 import train_line_svg from '../train_line_svg';
 
+let corrections = null;
 let geojson_lines = null;
 let all_lines = null;
 
-let load_train_line_svg = (company_name, line_name) => {
-  let svg = train_line_svg(geojson_lines, company_name, line_name);
+let load_train_line_svg = (company_name, line_name, filter_line=null) => {
+  let correction = corrections[company_name] && corrections[company_name][line_name];
+  let svg = train_line_svg(geojson_lines, company_name, line_name, 640, correction);
   let viewer = document.querySelector('#svg-viewer');
   viewer.innerHTML = svg;
+
+
+  for (var p of document.querySelectorAll('g.segment')) {
+    p.addEventListener('mouseover', (e) => {
+      e.target.setAttribute('stroke-width', '4');
+      e.target.setAttribute('stroke', 'red');
+
+    });
+    p.addEventListener('mouseout', (e) => {
+      e.target.removeAttribute('stroke-width');
+      e.target.removeAttribute('stroke');
+    });
+  }
 };
 
 let create_controls = () => {
   let companies = Object.keys(all_lines);
-  console.log(all_lines);
   var controls = document.querySelector('#controls');
   for (var company of companies) {
     var d = document.createElement('a');
@@ -45,7 +59,6 @@ let create_controls = () => {
         let element = e.target;
         let line_name = element.getAttribute('data-line');
         let company_name = element.getAttribute('data-company');
-        console.log(line_name);
         load_train_line_svg(company_name, line_name);
         return true;
       });
@@ -55,16 +68,19 @@ let create_controls = () => {
 };
 
 let main = () => {
-  fetch('/data/N02-18_GML/N02-18_RailroadSection.geojson')
-    .then((response) => {
-      return response.json();
-    })
-    .then((json) => {
-      geojson_lines = json;
-      all_lines = train_lines(json);
-      create_controls();
-      load_train_line_svg('東日本旅客鉄道', '(山手線|東海道線|東北線)$');
-    });
+  fetch('/config/train_line_corrects.json').then(r => r.json()).then((json) => {
+    corrections = json;
+    fetch('/data/N02-18_GML/N02-18_RailroadSection.geojson')
+      .then((response) => {
+        return response.json();
+      })
+      .then((json) => {
+        geojson_lines = json;
+        all_lines = train_lines(json);
+        create_controls();
+        load_train_line_svg('東日本旅客鉄道', '山手線');
+      });
+  });
 };
 
 main();

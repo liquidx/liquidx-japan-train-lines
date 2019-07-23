@@ -16,9 +16,7 @@ let segments_for_line = (geojson, company_name_pattern, line_name_pattern) => {
   return segments;
 };
 
-let svg_from_segments = (geojson, company_name_pattern, line_name_pattern) => {
-  let segments = segments_for_line(geojson, company_name_pattern, line_name_pattern);
-
+let bounding_box = (segments) => {
   let min_x, min_y, max_x, max_y;
   for (var i = 0; i < segments.length; i++) {
     let coordinates = segments[i]['geometry']['coordinates'];
@@ -35,10 +33,34 @@ let svg_from_segments = (geojson, company_name_pattern, line_name_pattern) => {
       if (c[1] > max_y) { max_y = c[1]; }
     }
   }
+  return {min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y};
+};
 
-  let max_dim = 640;
-  let width = max_x - min_x;
-  let height = max_y - min_y;
+let svg_from_segments = (geojson, company_name, line_name, max_dim = 640, correction = null) => {
+  let segments = segments_for_line(geojson, company_name, line_name);
+  if (correction) {
+    for (var include of correction.includes) {
+      segments = segments.concat(segments_for_line(geojson, include.company, include.line));
+    }
+    for (var filter of correction.filters) {
+      filter_segments = segments_for_line(geojson, filter.company, filter.line);
+      let filter_b = bounding_box(filter_segments);
+      segments = segments.filter((v, i, s) => { 
+        let p = v.geometry.coordinates[0];
+        return true
+          && (!filter.within_x || p[0] <= filter_b.max_x)
+          && (!filter.within_y || p[1] <= filter_b.max_y)
+          && (!filter.within_x || p[0] >= filter_b.min_x)
+          && (!filter.within_y || p[1] >= filter_b.min_y);
+      });
+    }    
+  }
+
+ 
+
+  let b = bounding_box(segments);
+  let width = b.max_x - b.min_x;
+  let height = b.max_y - b.min_y;
   let width_px, height_px;
   if (width > height) {
     width_px = max_dim;
@@ -48,21 +70,23 @@ let svg_from_segments = (geojson, company_name_pattern, line_name_pattern) => {
     width_px = height_px / height * width;
   }
 
-
   let svg_string = `<svg width="${width_px}px" height="${height_px}px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
-  svg_string += '  <g stroke="#D5B43C" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel">\n';
+  svg_string += '  <g stroke="#D5B43C" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
+  let n = 1;
   for (var segment of segments) {
     let svg_points = '';
     for (var point of segment.geometry.coordinates) {
-      var x = (point[0] - min_x) * width_px / width;
-      var y = height_px - ((point[1] - min_y) * height_px / height);
+      var x = (point[0] - b.min_x) * width_px / width;
+      var y = height_px - ((point[1] - b.min_y) * height_px / height);
       if (!svg_points) {
         svg_points += `M${x},${y} `
       } else {
         svg_points += `L${x},${y} `
       }
     }
-    let svg_path = `   <path d="${svg_points}"></path>\n`;
+    let path_id = `path-${n}`;
+    n += 1;
+    let svg_path = `   <g class="segment" id="${path_id}"><path d="${svg_points}"></path></g>\n`;
     svg_string += svg_path;
   }
   svg_string += '</g>\n';
