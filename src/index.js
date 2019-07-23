@@ -26,7 +26,8 @@ let create_controls = () => {
     d.addEventListener('click', (e) => {
       e.preventDefault();
       let element = e.target;
-      console.log(element.getAttribute('data-company'));
+      let company_name = element.getAttribute('data-company');
+      load_train_line_svg(company_name, null);
       return true;
     });
     controls.appendChild(d);
@@ -45,7 +46,7 @@ let create_controls = () => {
         let line_name = element.getAttribute('data-line');
         let company_name = element.getAttribute('data-company');
         console.log(line_name);
-        load_train_line_svg(line_name, company_name);
+        load_train_line_svg(company_name, line_name);
         return true;
       });
       controls.appendChild(l);

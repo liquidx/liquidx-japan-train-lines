@@ -36,10 +36,18 @@ let svg_from_segments = (geojson, company_name_pattern, line_name_pattern) => {
     }
   }
 
+  let max_dim = 640;
   let width = max_x - min_x;
   let height = max_y - min_y;
-  let width_px = 640;
-  let height_px = width_px / width * height;
+  let width_px, height_px;
+  if (width > height) {
+    width_px = max_dim;
+    height_px = width_px / width * height;
+  } else {
+    height_px = max_dim;
+    width_px = height_px / height * width;
+  }
+
 
   let svg_string = `<svg width="${width_px}px" height="${height_px}px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
   svg_string += '  <g stroke="#D5B43C" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel">\n';
