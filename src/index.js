@@ -7,8 +7,8 @@ import train_line_svg from '../train_line_svg';
 let geojson_lines = null;
 let all_lines = null;
 
-let load_train_line_svg = (line_name) => {
-  let svg = train_line_svg(geojson_lines, line_name);
+let load_train_line_svg = (company_name, line_name) => {
+  let svg = train_line_svg(geojson_lines, company_name, line_name);
   let viewer = document.querySelector('#svg-viewer');
   viewer.innerHTML = svg;
 };
@@ -43,8 +43,9 @@ let create_controls = () => {
         e.preventDefault();
         let element = e.target;
         let line_name = element.getAttribute('data-line');
+        let company_name = element.getAttribute('data-company');
         console.log(line_name);
-        load_train_line_svg(line_name);
+        load_train_line_svg(line_name, company_name);
         return true;
       });
       controls.appendChild(l);
@@ -61,6 +62,7 @@ let main = () => {
       geojson_lines = json;
       all_lines = train_lines(json);
       create_controls();
+      load_train_line_svg('東日本旅客鉄道', '(山手線|東海道線|東北線)$');
     });
 };
 

@@ -1,5 +1,5 @@
 
-let segments_for_line = (geojson, line_name_pattern, company_name_pattern) => {
+let segments_for_line = (geojson, company_name_pattern, line_name_pattern) => {
   let segments = [];
   let line_name_re = new RegExp(line_name_pattern, 'i');
   let company_name_re = new RegExp(company_name_pattern, 'i');
@@ -7,9 +7,8 @@ let segments_for_line = (geojson, line_name_pattern, company_name_pattern) => {
   for (var feature of geojson.features) {
     let line_name = feature.properties['N02_003'];
     let company_name = feature.properties['N02_004'];
-    //if (!line_name_pattern || line_name_re.test(line_name)) {
-    if (!line_name_pattern || line_name == line_name_pattern) {
-      if (!company_name_pattern || company_name_re.test(company_name)) {
+    if (!company_name_pattern || company_name_re.test(company_name)) {
+      if (!line_name_pattern || line_name_re.test(line_name)) {
         segments.push(feature);
       }
     }
@@ -17,8 +16,8 @@ let segments_for_line = (geojson, line_name_pattern, company_name_pattern) => {
   return segments;
 };
 
-let svg_from_segments = (geojson, line_name_pattern, company_name_pattern) => {
-  let segments = segments_for_line(geojson, line_name_pattern, company_name_pattern);
+let svg_from_segments = (geojson, company_name_pattern, line_name_pattern) => {
+  let segments = segments_for_line(geojson, company_name_pattern, line_name_pattern);
 
   let min_x, min_y, max_x, max_y;
   for (var i = 0; i < segments.length; i++) {
@@ -43,7 +42,7 @@ let svg_from_segments = (geojson, line_name_pattern, company_name_pattern) => {
   let height_px = width_px / width * height;
 
   let svg_string = `<svg width="${width_px}px" height="${height_px}px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
-  svg_string += '  <g stroke="#D5B43C" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel">\n';
+  svg_string += '  <g stroke="#D5B43C" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel">\n';
   for (var segment of segments) {
     let svg_points = '';
     for (var point of segment.geometry.coordinates) {
