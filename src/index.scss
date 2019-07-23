@@ -26,11 +26,23 @@ body {
   overflow-y: scroll;
 }
 
+#svg-control {
+  width: 20vw;
+  background-color: white;
+}
+
 #svg-viewer {
   flex: 1 1 auto;
   order: 2;
   padding: 10px;
-  margin-left: 25vw;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#svg-viewer svg {
+  display: block;
 }
 
 a.company, a.line {
