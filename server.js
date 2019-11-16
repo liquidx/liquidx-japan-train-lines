@@ -16,7 +16,7 @@ app.use(webpackDevMiddleware(compiler, {
 
 app.use(express.static('public'));
 
-var listener = app.listen(4000, function () {
+var listener = app.listen(4001, function () {
   console.log("****************************************");
   console.log('**** http://localhost:' + listener.address().port + "/");
   console.log("****************************************");
