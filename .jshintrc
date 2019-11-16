@@ -1,0 +1,10 @@
+{
+  "undef": true,
+  "unused": true,
+  "esversion": 6,
+  "asi": true,
+  "globals": {
+    "window": true,
+    "document": true
+  }
+}
