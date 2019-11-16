@@ -8,6 +8,31 @@ let corrections = null;
 let geojson_lines = null;
 let all_lines = null;
 
+let activateArrows = () => {
+  document.addEventListener('keyup', e => {
+    if (e.key == 'ArrowRight' || e.key == 'ArrowLeft') {
+      e.preventDefault()
+      let selected = document.querySelector('.line.selected')
+      if (selected) {
+        let nextSelected = null
+        if (e.key == 'ArrowRight') {
+          nextSelected = selected.nextSibling
+        } else if (e.key == 'ArrowLeft') {
+          nextSelected = selected.previousSibling
+        }
+        let nextCompany = nextSelected.getAttribute('data-company')
+        let nextLine = nextSelected.getAttribute('data-line')
+        console.log(nextCompany, nextLine)
+        load_train_line_svg(nextCompany, nextLine)
+
+        _.map(document.querySelectorAll('.line'), o => o.classList.remove('selected'))
+        nextSelected.classList.add('selected')
+      }
+    }
+    return true
+  })
+}
+
 let load_train_line_svg = (company_name, line_name, filter_line=null) => {
   let correction = corrections[company_name] && corrections[company_name][line_name];
   let svg = train_line_svg(geojson_lines, company_name, line_name, 640, correction);
@@ -33,7 +58,7 @@ let create_controls = () => {
   var controls = document.querySelector('#controls');
   for (var company of companies) {
     var d = document.createElement('a');
-    d.setAttribute('class', 'company');
+    d.classList.add('train-company', 'line')
     d.setAttribute('href', `#${company}`);
     d.setAttribute('data-company', company);
     d.appendChild(document.createTextNode(company));
@@ -41,6 +66,10 @@ let create_controls = () => {
       let element = e.target;
       let company_name = element.getAttribute('data-company');
       load_train_line_svg(company_name, null);
+
+      _.map(document.querySelectorAll('.line'), o => o.classList.remove('selected'))
+      element.classList.add('selected')
+
       return true;
     });
     controls.appendChild(d);
@@ -48,7 +77,7 @@ let create_controls = () => {
 
     for (var line of lines) {
       var l = document.createElement('a');
-      l.setAttribute('class', 'line');
+      l.classList.add('train-line', 'line')
       l.setAttribute('href', `#${company}/${line}`);
       l.setAttribute('data-line', line);
       l.setAttribute('data-company', company);
@@ -58,6 +87,9 @@ let create_controls = () => {
         let line_name = element.getAttribute('data-line');
         let company_name = element.getAttribute('data-company');
         load_train_line_svg(company_name, line_name);
+
+        _.map(document.querySelectorAll('.line'), o => o.classList.remove('selected'))
+        element.classList.add('selected')
         return true;
       });
       controls.appendChild(l);
@@ -66,72 +98,36 @@ let create_controls = () => {
 };
 
 let main = () => {
-  fetch('/config/train_line_corrects.json').then(r => r.json()).then((json) => {
-    corrections = json;
-    fetch('/data/N02-18_GML/N02-18_RailroadSection.geojson')
-      .then((response) => {
-        return response.json();
-      })
-      .then((json) => {
-        geojson_lines = json;
-        all_lines = train_lines(json);
-        create_controls();
-        let company = '東日本旅客鉄道';
-        let line = '山手線';
-        if (document.location.hash) {
-          let path = document.location.hash.replace('#', '').split('/');
-          if (path.length == 1) {
-            company = decodeURIComponent(path[0]);
-            line = null;
+  fetch('/config/train_line_corrects.json').then(r => r.json())
+    .then((json) => {
+      corrections = json;
+      fetch('/data/N02-18_GML/N02-18_RailroadSection.geojson')
+        .then((response) => {
+          return response.json();
+        })
+        .then((json) => {
+          geojson_lines = json;
+          all_lines = train_lines(json);
+          create_controls();
+          let company = '東日本旅客鉄道';
+          let line = '山手線';
+          if (document.location.hash) {
+            let path = document.location.hash.replace('#', '').split('/');
+            if (path.length == 1) {
+              company = decodeURIComponent(path[0]);
+              line = null;
+            }
+            if (path.length == 2) {
+              company = decodeURIComponent(path[0]);
+              line = decodeURIComponent(path[1]);
+            }
           }
-          if (path.length == 2) {
-            company = decodeURIComponent(path[0]);
-            line = decodeURIComponent(path[1]);
-          }
-        }
-        console.log(company, line);
-        load_train_line_svg(company, line);
-      });
-  });
+          console.log(company, line);
+          load_train_line_svg(company, line);
+        });
+    });
+
+  activateArrows()
 };
 
 main();
-
-// let createPlacesheet = () => {
-//   const root = document.querySelector('#mobile-frame');
-//   let header = document.createElement('div');
-//   header.setAttribute('class', 'ps-header');
-//   root.appendChild(header);
-
-//   let headerCaption = document.createElement('div');
-//   headerCaption.setAttribute('class', 'ps-header-caption');
-//   {
-//     let title = document.createElement('div');
-//     title.setAttribute('class', 'ps-header-caption-title');
-//     title.appendChild(document.createTextNode("東京茶寮"));
-//     headerCaption.appendChild(title);
-//   }
-//   {
-//     let ugcLine = document.createElement('div');
-//     ugcLine.setAttribute('class', 'ps-header-caption-ugc');
-//     ugcLine.appendChild(document.createTextNode("4.4 ✭✭✭✭✩ (83)"));
-//     headerCaption.appendChild(ugcLine);    
-//   }
-//   {
-//     let subtitle = document.createElement('div');
-//     subtitle.setAttribute('class', 'ps-header-caption-subtitle');
-//     subtitle.appendChild(document.createTextNode("茶葉販売店.お手頃"));
-//     headerCaption.appendChild(subtitle);        
-//   }
-//   {
-//     let subtitle = document.createElement('div');
-//     subtitle.setAttribute('class', 'ps-header-caption-subtitle');
-//     subtitle.appendChild(document.createTextNode("営業時間外 13:00 木営業開始"));
-//     headerCaption.appendChild(subtitle);        
-//   }
-//   root.append(headerCaption);
-
-
-// };
-
-// createPlacesheet();
