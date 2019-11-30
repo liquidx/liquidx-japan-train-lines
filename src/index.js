@@ -55,6 +55,24 @@ let load_train_line_svg = (company_name, line_name, filter_line=null) => {
 
 let create_controls = () => {
   let companies = Object.keys(all_lines);
+  
+  // force a few companies to tbe at the top.
+  let manual_order_companies = [
+    '東京地下鉄',
+    '東京急行電鉄',
+    '東京モノレール',
+    '東京都',
+    '東京臨海高速鉄道',
+    '東日本旅客鉄道',
+    '西武鉄道',
+    '京成電鉄',
+    '京王電鉄'
+  ]
+
+  companies = _.pull(companies, manual_order_companies)
+  companies = _.concat(manual_order_companies, companies)
+
+
   var controls = document.querySelector('#controls');
   for (var company of companies) {
     var d = document.createElement('a');
