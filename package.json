@@ -5,6 +5,7 @@
     "build": "npx webpack --config webpack.dev.js",
     "watch": "npx webpack --config webpack.dev.js --watch",
     "start": "node server.js",
+    "now-build": "npx webpack --config webpack.prod.js",
     "deploy": "npx webpack --config webpack.prod.js && now deploy public --local-config ./now.json --prod",
     "_start": "webpack-dev-server --open"
   },
