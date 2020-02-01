@@ -2,13 +2,9 @@ const express = require('express');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 
-
 const app = express();
-const config = require('./webpack.config.js');
+const config = require('./webpack.common.js/index.js');
 const compiler = webpack(config);
-
-app.use('/data', express.static('data'));
-app.use('/config', express.static('config'));
 
 app.use(webpackDevMiddleware(compiler, {
   publicPath: config.output.publicPath

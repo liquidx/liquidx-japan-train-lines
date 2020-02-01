@@ -2,6 +2,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'development',  
@@ -25,8 +26,13 @@ module.exports = {
       filename: 'index.html',
       template: 'src/index.html',
       chunks: ['index']
-    })    
+    }),
+    new CopyPlugin([
+      { from: 'data', to: 'data' },
+      { from: 'config', to: 'config' },
+    ]),
   ],
+  
   module: {
     rules:[
       {
