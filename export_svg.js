@@ -18,8 +18,13 @@ let main = () => {
     .option('-o, --output <output>', 'Output');
 
   program.parse(process.argv);
+  const options = program.opts();
 
-  fs.readFile('data-raw/N02-19_GML/N02-19_RailroadSection.geojson', (err, data) => {
+  if (!options.line) {
+    return;
+  }
+
+  fs.readFile('data/N02-19_GML/N02-19_RailroadSection.geojson', (err, data) => {
     if (err) {
       console.error(err);
       return;
@@ -31,13 +36,30 @@ let main = () => {
       return;
     }
 
-    if (program.showLines) {
+    if (options.showLines) {
       console.log(train_lines(geojson));
       return;
     }
 
-    const svg_path = train_line_svg(geojson, program.line);
-    fs.writeFileSync(program.output, svg_path);
+    const companies = train_lines(geojson);
+    let companyForLine = ''
+    for (let company of Object.keys(companies)) {
+      const companyLines = companies[company];
+      if (Object.keys(companyLines).includes(options.line)) {
+        console.log('Found line', options.line, 'in ', company);
+        companyForLine = company;
+        break;
+      }
+    }
+
+    if (!companyForLine) {
+      console.log('Unable to find company for line', options.line)
+      return;
+    }
+
+    const svg_path = train_line_svg(geojson, companyForLine, options.line);
+    fs.writeFileSync(options.output, svg_path)
+    console.log('Output', options.output)
   });
 };
 
