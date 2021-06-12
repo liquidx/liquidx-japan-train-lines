@@ -5,8 +5,8 @@ let segments_for_line = (geojson, company_name_pattern, line_name_pattern) => {
   let company_name_re = new RegExp(company_name_pattern, 'i');
 
   for (var feature of geojson.features) {
-    let line_name = feature.properties['N02_003'];
-    let company_name = feature.properties['N02_004'];
+    let line_name = feature.properties['路線名'];
+    let company_name = feature.properties['運営会社'];
     if (!company_name_pattern || company_name_re.test(company_name)) {
       if (!line_name_pattern || line_name_re.test(line_name)) {
         segments.push(feature);

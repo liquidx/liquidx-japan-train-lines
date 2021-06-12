@@ -6,16 +6,27 @@ This is a node/web based tool to inspect the train line data from 国土数値�
 
 _The Yamanote Line Displayed in-app_
 
+Before building and running this, you must download the data from the Japanese Government GIS website.
+
+## Downloading the data
+
+1. Visit the [Japan GIS Homepage](http://nlftp.mlit.go.jp/ksj/index.html)
+2. Click on the link that is in section 4 [鉄道](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-v2_3.html)
+3. Select 全国 check box and press the 次へ button.
+4. In the list of downloads, select N02-19_GML.zip (平成30年) and press the 次へ button.
+
+
 ## Running the Project
 
-The data is not included, so follow the instructions below to download and extract to the `data/` folder.
+The data is not included, so follow the instructions above to download and extract to the `data/` folder.
+
 The app expects the folders and files in the following structure:
 
 ```
 projectRoot
 └───data
-│   └───N02-18_GML
-│       │   KS-META-N02-18.xml
+│   └───N02-19_GML
+│       │   KS-META-N02-19.xml
 │       │   N02-18.xml
 │       │   N02-18_RailroadSection.geojson
 │       │   N02-18_Station.geojson
@@ -28,20 +39,10 @@ After extracting the data, build and run.
 npm install
 npm run start 
 
-# open up http://localhost:4001/
+# open up http://localhost:8301/
 ```
 
 The inspect simply displays the train line that was selected in SVG, scaled to a fixed width.
-
-## Downloading the data
-
-1. Visit the [Japan GIS Homepage](http://nlftp.mlit.go.jp/ksj/index.html)
-2. Click on the link that is in section 4 [鉄道](http://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-v2_3.html)
-3. Select 全国 check box and press the 次へ button.
-4. In the list of downloads, select N02-18_GML.zip (平成30年) and press the 次へ button.
-5. Fill in the survey and fill 　回答する　
-6. Accept the terms.
-7. Press the download button for the data.
 
 ## Opening the data
 

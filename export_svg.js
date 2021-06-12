@@ -19,7 +19,7 @@ let main = () => {
 
   program.parse(process.argv);
 
-  fs.readFile('data-raw/N02-18_GML/N02-18_RailroadSection.geojson', (err, data) => {
+  fs.readFile('data-raw/N02-19_GML/N02-19_RailroadSection.geojson', (err, data) => {
     if (err) {
       console.error(err);
       return;
