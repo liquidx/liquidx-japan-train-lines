@@ -118,10 +118,10 @@ let create_controls = (lines) => {
 };
 
 let main = () => {
-  fetch('/config/train_line_corrects.json').then(r => r.json())
+  fetch('/data/train-line-corrections.json').then(r => r.json())
     .then((json) => {
       corrections = json;
-      fetch('/data/N02-19_GML/N02-19_RailroadSection.geojson')
+      fetch('/data/N02-19_RailroadSection.geojson')
         .then((response) => {
           return response.json();
         })
