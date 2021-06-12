@@ -1,6 +1,6 @@
 {
   "name": "liquidx-japan-train-lines",
-  "version": "1.0.20210612",
+  "version": "1.0.20210613",
   "scripts": {
     "build": "npx webpack --config webpack.js --progress",
     "watch": "npx webpack --config webpack.js --watch --progress",
