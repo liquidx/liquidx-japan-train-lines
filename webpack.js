@@ -29,13 +29,7 @@ module.exports = merge.merge(
    
     new MiniCssExtractPlugin({
       filename: '[name].css'
-    }),
-    new CopyPlugin({
-      patterns: [
-        { from: 'data', to: 'data' },
-        { from: 'config', to: 'config' },
-      ]
-  }),
+    })
   ],
   
   module: {
