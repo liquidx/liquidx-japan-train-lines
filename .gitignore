@@ -1,5 +1,4 @@
-/data/
-
+/static/N02*.geojson
 .DS_Store
 node_modules
 /build
