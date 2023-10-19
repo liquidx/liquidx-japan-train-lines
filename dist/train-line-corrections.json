@@ -1,0 +1,13 @@
+{
+  "東日本旅客鉄道": {
+    "山手線": {
+      "includes": [
+        {"company": "東日本旅客鉄道", "line": "東北線"},
+        {"company": "東日本旅客鉄道", "line": "東海道線"}
+      ],
+      "filters": [
+        {"company": "東日本旅客鉄道", "line": "山手線", "within_x": false, "within_y": true}
+      ]
+    }
+  }
+}
