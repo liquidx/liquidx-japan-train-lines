@@ -16,7 +16,6 @@
       "svelte": "./dist/index.js"
     }
   },
-  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -34,8 +33,6 @@
     "typescript": "^5.2.2",
     "vite": "^4.4.11"
   },
-  "svelte": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "type": "module",
   "dependencies": {
     "lodash": "^4.17.21",
