@@ -49,12 +49,18 @@ const bounding_box = (segments) => {
 
 export const svg_from_segments = (
   geojson,
+  region_name,
   company_name,
   line_name,
   max_dim = 640,
   correction = null
 ) => {
-  let segments = segments_for_line(geojson, company_name, line_name);
+  let segments = [];
+  if (company_name) {
+    segments = segments_for_line(geojson, company_name, line_name);
+  } else if (region_name) {
+    segments = geojson.features;
+  }
   if (correction) {
     for (var include of correction.includes) {
       segments = segments.concat(
