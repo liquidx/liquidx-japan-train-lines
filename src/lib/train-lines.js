@@ -45,15 +45,15 @@ export const joinSegments = (segments) => {
           head = segmentHead;
           remainingSegments = remainingSegments.filter((s) => s !== segment);
           break;
-        } else if (segmentTail[0] == tail[0] && segmentTail[1] == tail[1]) {
-          // Reverse the segment and add it to the path.
-          path = path.concat(points.slice(1).reverse());
-          tail = segmentHead;
-          remainingSegments = remainingSegments.filter((s) => s !== segment);
         } else if (segmentHead[0] == head[0] && segmentHead[1] == head[1]) {
           // Reverse the segment and add it to the path.
           path = points.reverse().concat(path.slice(1));
           head = segmentTail;
+          remainingSegments = remainingSegments.filter((s) => s !== segment);
+        } else if (segmentTail[0] == tail[0] && segmentTail[1] == tail[1]) {
+          // Reverse the segment and add it to the path.
+          path = path.concat(points.slice(1).reverse());
+          tail = segmentHead;
           remainingSegments = remainingSegments.filter((s) => s !== segment);
         }
       }
