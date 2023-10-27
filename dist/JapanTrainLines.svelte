@@ -151,8 +151,4 @@
   a.train-line {
     margin-left: 20px;
   }
-
-  a.line.selected {
-    background-color: rgb(248, 234, 190);
-  }
 </style>

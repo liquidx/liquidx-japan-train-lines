@@ -58,7 +58,7 @@ export const svg_from_segments = (
   region_name,
   company_name,
   line_name,
-  max_dim = 640,
+  max_dim = 2000,
   correction = null
 ) => {
   let segments = [];
