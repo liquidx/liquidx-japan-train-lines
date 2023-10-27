@@ -1,4 +1,4 @@
-export function drawTrainLine(companyName: any, lineName: any, viewerEl: any, width?: number): void;
+export function drawTrainLine(regionName: any, companyName: any, lineName: any, viewerEl: any, width?: number): void;
 export function loadTrainLines({ railroadGeoJsonUrl }: {
     railroadGeoJsonUrl: any;
 }): Promise<{

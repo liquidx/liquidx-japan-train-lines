@@ -5,13 +5,16 @@
   export let railroadGeoJsonUrl = "/railroad.geojson";
   let viewerEl;
   let trainCompanyNames = [];
-  let selectedCompany = "東日本旅客鉄道";
-  let selectedLine = "山手線";
+  let selectedRegion = "";
+  //let selectedCompany = "東日本旅客鉄道";
+  //  let selectedLine = "山手線";
+  let selectedCompany = "東京地下鉄";
+  let selectedLine = "2号線日比谷線";
 
   onMount(async () => {
     let data = await loadTrainLines({ railroadGeoJsonUrl });
     trainCompanyNames = data.trainCompanyNames;
-    drawTrainLine(selectedCompany, selectedLine, viewerEl);
+    drawTrainLine(null, selectedCompany, selectedLine, viewerEl);
     registerKeyboardShortcuts({ viewerEl });
   });
 
@@ -19,20 +22,24 @@
     let element = e.target;
     selectedCompany = element.getAttribute("data-company");
     selectedLine = element.getAttribute("data-line");
-    drawTrainLine(selectedCompany, selectedLine, viewerEl);
+    drawTrainLine(null, selectedCompany, selectedLine, viewerEl);
   };
   const didSelectCompany = (e) => {
     let element = e.target;
     selectedCompany = element.getAttribute("data-company");
     selectedLine = null;
-    drawTrainLine(selectedCompany, selectedLine, viewerEl);
+    drawTrainLine(null, selectedCompany, selectedLine, viewerEl);
+  };
+
+  const didSelectTokyo = (e) => {
+    drawTrainLine("tokyo", null, null, viewerEl);
   };
 
   const registerKeyboardShortcuts = () => {
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowRight") {
         getNext();
-        drawTrainLine(selectedCompany, selectedLine, viewerEl);
+        drawTrainLine(null, selectedCompany, selectedLine, viewerEl);
       }
     });
   };
@@ -74,6 +81,10 @@
 
 <div id="viewer-container">
   <div id="controls">
+    <div>
+      <a href="#x" class="train-company" on:click={didSelectTokyo}>Tokyo 東京</a
+      >
+    </div>
     {#each trainCompanyNames as company}
       <div>
         <a
