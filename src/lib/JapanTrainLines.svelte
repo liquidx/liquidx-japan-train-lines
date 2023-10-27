@@ -6,8 +6,10 @@
   let viewerEl;
   let trainCompanyNames = [];
   let selectedRegion = "";
-  let selectedCompany = "東日本旅客鉄道";
-  let selectedLine = "山手線";
+  //let selectedCompany = "東日本旅客鉄道";
+  //  let selectedLine = "山手線";
+  let selectedCompany = "東京地下鉄";
+  let selectedLine = "2号線日比谷線";
 
   onMount(async () => {
     let data = await loadTrainLines({ railroadGeoJsonUrl });

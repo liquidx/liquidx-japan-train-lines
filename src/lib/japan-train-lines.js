@@ -1,6 +1,6 @@
 import { pull, concat, map } from "lodash";
 
-import { line_names } from "./train-lines.js";
+import { lineNames } from "./train-lines.js";
 import { svg_from_segments } from "./train-line-svg.js";
 import trainLineCorrections from "./train-line-corrections.json";
 import {
@@ -136,7 +136,7 @@ export const loadTrainLines = async ({ railroadGeoJsonUrl }) => {
       // Store to a global
       _trainLines = json;
       _tokyoTrainLines = getTokyoGeoJson(json);
-      let trainLineNames = line_names(json);
+      let trainLineNames = lineNames(json);
       _trainCompanyNames = getTrainCompanyNames(trainLineNames);
 
       return {

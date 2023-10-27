@@ -1,3 +1,7 @@
+import { joinSegments } from "./train-lines.js";
+
+const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
+
 const segments_for_line = (
   geojson,
   company_name_pattern,
@@ -16,7 +20,9 @@ const segments_for_line = (
       }
     }
   }
-  return segments;
+
+  const joinedSegments = joinSegments(segments);
+  return joinedSegments;
 };
 
 const bounding_box = (segments) => {
@@ -101,7 +107,7 @@ export const svg_from_segments = (
 
   let svg_string = `<svg width="${width_px}px" height="${height_px}px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
   svg_string +=
-    '  <g stroke="#D5B43C" stroke-width="2" fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
+    '  <g fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
   let n = 1;
   for (var segment of segments) {
     let svg_points = "";
@@ -115,8 +121,9 @@ export const svg_from_segments = (
       }
     }
     let path_id = `path-${n}`;
+    let strokeColor = colors[n % colors.length];
     n += 1;
-    let svg_path = `   <g class="segment" id="${path_id}"><path d="${svg_points}"></path></g>\n`;
+    let svg_path = `  <path id="${path_id}" stroke="#${strokeColor}" stroke-width="2" d="${svg_points}"></path>\n`;
     svg_string += svg_path;
   }
   svg_string += "</g>\n";
