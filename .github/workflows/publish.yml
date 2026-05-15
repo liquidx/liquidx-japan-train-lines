@@ -38,6 +38,6 @@ jobs:
       - name: Delete old package versions
         uses: actions/delete-package-versions@v5
         with:
-          package-name: "liquidx-genart"
+          package-name: "liquidx-japan-train-lines"
           package-type: "npm"
           min-versions-to-keep: 2
