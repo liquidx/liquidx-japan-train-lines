@@ -1,0 +1,43 @@
+name: Publish Package
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Required to upload to GitHub Packages
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          # Tells npm to use the GitHub registry, not the public npm registry
+          registry-url: "https://npm.pkg.github.com"
+          # Scope is usually your username or org name (e.g., @myusername)
+          scope: "@liquidx"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Publish to GitHub Packages
+        run: pnpm publish --no-git-checks
+        env:
+          # GITHUB_TOKEN is automatically provided by Actions; no manual secret needed
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old package versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "liquidx-genart"
+          package-type: "npm"
+          min-versions-to-keep: 2
