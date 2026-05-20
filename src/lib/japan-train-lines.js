@@ -10,6 +10,8 @@ import {
 
 let _trainLines = {};
 let _regionsGeoJson = {};
+let _stationGeoJson = null;
+let _regionsStationGeoJson = {};
 
 export const regions = [
   { id: "tokyo", name: "Tokyo", nameJa: "東京", bounds: { min_lng: 138.9114, max_lng: 139.9305, min_lat: 35.498, max_lat: 35.916 } },
@@ -51,9 +53,11 @@ export const drawTrainLine = (
 
   console.log(regionName, companyName, lineName);
   let geojson = _regionsGeoJson[regionName] || _trainLines;
+  let stationGeoJson = _regionsStationGeoJson[regionName] || _stationGeoJson;
 
   let svg = svg_from_segments(
     geojson,
+    stationGeoJson,
     regionName,
     companyName,
     lineName,
@@ -148,21 +152,33 @@ const filterGeoJsonByBounds = (geojson, bounds) => {
   return { features };
 };
 
-export const loadTrainLines = async ({ railroadGeoJsonUrl }) => {
-  return fetch(railroadGeoJsonUrl)
-    .then((response) => {
-      return response.json();
-    })
-    .then((json) => {
+export const loadTrainLines = async ({ railroadGeoJsonUrl, stationGeoJsonUrl = null }) => {
+  return Promise.all([
+    fetch(railroadGeoJsonUrl).then((response) => response.json()),
+    stationGeoJsonUrl
+      ? fetch(stationGeoJsonUrl).then((response) => response.json())
+      : Promise.resolve(null),
+  ])
+    .then(([json, stationJson]) => {
       _trainLines = json;
+      _stationGeoJson = stationJson;
       
       // Cache GeoJSON slice for each region
       _regionsGeoJson["japan"] = json;
       _regionsGeoJson["tokyo"] = getTokyoGeoJson(json);
+      if (stationJson) {
+        _regionsStationGeoJson["japan"] = stationJson;
+        _regionsStationGeoJson["tokyo"] = getTokyoGeoJson(stationJson);
+      } else {
+        _regionsStationGeoJson = {};
+      }
 
       for (const r of regions) {
         if (r.id !== "japan" && r.id !== "tokyo") {
           _regionsGeoJson[r.id] = filterGeoJsonByBounds(json, r.bounds);
+          if (stationJson) {
+            _regionsStationGeoJson[r.id] = filterGeoJsonByBounds(stationJson, r.bounds);
+          }
         }
       }
 

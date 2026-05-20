@@ -3,6 +3,7 @@
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
+  export let stationGeoJsonUrl = null;
   let viewerEl;
   let regions = [];
   let regionDataMap = {};
@@ -22,9 +23,65 @@
   let startY = 0;
   let initPanX = 0;
   let initPanY = 0;
+  const lineStrokeWidth = 2;
+  const minStationRadius = lineStrokeWidth * 0.75;
+  const maxStationRadius = lineStrokeWidth * 3;
+
+  const stationRadiusForZoom = (currentZoom) => {
+    const zoomStep = Math.log2(Math.max(currentZoom, 0.25));
+    const radius = lineStrokeWidth * (1.5 + zoomStep * 0.5);
+    return Math.max(minStationRadius, Math.min(maxStationRadius, radius));
+  };
+
+  const getSvgElement = () => viewerEl?.querySelector("svg");
+
+  const clientPointToSvgPoint = (clientX, clientY) => {
+    const svg = getSvgElement();
+    if (!svg) {
+      return { x: clientX, y: clientY };
+    }
+
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+
+    const screenCtm = svg.getScreenCTM();
+    if (!screenCtm) {
+      return { x: clientX, y: clientY };
+    }
+
+    return point.matrixTransform(screenCtm.inverse());
+  };
+
+  const getSvgViewportCenter = () => {
+    const svg = getSvgElement();
+    if (!svg) {
+      return { x: 0, y: 0 };
+    }
+
+    const rect = svg.getBoundingClientRect();
+    return clientPointToSvgPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  };
+
+  const applyMapTransform = () => {
+    const mapLayer = viewerEl?.querySelector("[data-map-layer]");
+    if (!mapLayer) return;
+
+    mapLayer.setAttribute(
+      "transform",
+      `translate(${panX} ${panY}) scale(${zoom})`
+    );
+
+    const screenCtm = mapLayer.getScreenCTM();
+    const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
+    const adjustedStationRadius = stationRadiusForZoom(zoom) / screenScale;
+    for (const station of mapLayer.querySelectorAll(".station-dot")) {
+      station.setAttribute("r", adjustedStationRadius);
+    }
+  };
 
   onMount(async () => {
-    let data = await loadTrainLines({ railroadGeoJsonUrl });
+    let data = await loadTrainLines({ railroadGeoJsonUrl, stationGeoJsonUrl });
     regions = data.regions;
     regionDataMap = data.regionData;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
@@ -34,6 +91,12 @@
   // Reactive redraw whenever region, company, line, or color option changes
   $: if (viewerEl && regions.length > 0) {
     drawTrainLine(selectedRegion, selectedCompany, selectedLine, viewerEl, 640, { showLineColors });
+    applyMapTransform();
+  }
+
+  $: mapTransform = { zoom, panX, panY };
+  $: if (viewerEl && mapTransform) {
+    applyMapTransform();
   }
 
   const handleReset = () => {
@@ -42,40 +105,33 @@
     panY = 0;
   };
 
-  const zoomToPoint = (clientX, clientY, factor) => {
-    const x = (clientX - panX) / zoom;
-    const y = (clientY - panY) / zoom;
+  const zoomToPoint = (point, factor) => {
+    const x = (point.x - panX) / zoom;
+    const y = (point.y - panY) / zoom;
     let newZoom = zoom * factor;
     // Limit zoom scale range
     newZoom = Math.max(0.15, Math.min(20, newZoom));
-    panX = clientX - x * newZoom;
-    panY = clientY - y * newZoom;
+    panX = point.x - x * newZoom;
+    panY = point.y - y * newZoom;
     zoom = newZoom;
   };
 
   const zoomIn = () => {
     if (!viewerEl) return;
-    const container = viewerEl.parentElement;
-    const rect = container.getBoundingClientRect();
-    zoomToPoint(rect.width / 2, rect.height / 2, 1.3);
+    zoomToPoint(getSvgViewportCenter(), 1.3);
   };
 
   const zoomOut = () => {
     if (!viewerEl) return;
-    const container = viewerEl.parentElement;
-    const rect = container.getBoundingClientRect();
-    zoomToPoint(rect.width / 2, rect.height / 2, 1 / 1.3);
+    zoomToPoint(getSvgViewportCenter(), 1 / 1.3);
   };
 
   const handleWheel = (e) => {
     e.preventDefault();
     const zoomFactor = 1.15;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
     
     const factor = e.deltaY < 0 ? zoomFactor : 1 / zoomFactor;
-    zoomToPoint(mouseX, mouseY, factor);
+    zoomToPoint(clientPointToSvgPoint(e.clientX, e.clientY), factor);
   };
 
   const handleMouseDown = (e) => {
@@ -83,8 +139,9 @@
     if (e.target.closest('.hud-controls')) return;
 
     isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
+    const point = clientPointToSvgPoint(e.clientX, e.clientY);
+    startX = point.x;
+    startY = point.y;
     initPanX = panX;
     initPanY = panY;
 
@@ -94,8 +151,9 @@
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const point = clientPointToSvgPoint(e.clientX, e.clientY);
+    const dx = point.x - startX;
+    const dy = point.y - startY;
     panX = initPanX + dx;
     panY = initPanY + dy;
   };
@@ -227,10 +285,10 @@
     on:wheel={handleWheel}
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
-    <div 
-      id="svg-content-wrapper" 
+    <div
+      id="svg-content-wrapper"
       bind:this={viewerEl}
-      style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0;"
+      style="--zoom: {zoom};"
     ></div>
 
     <!-- HUD Overlay Controls -->
@@ -519,26 +577,37 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    will-change: transform;
     pointer-events: none; /* Let events fall through to #svg-viewer */
   }
 
   /* Dynamic event styling inside SVG */
   :global(#svg-content-wrapper svg) {
     pointer-events: auto; /* Re-enable pointer events for the SVG paths */
-    max-width: 90%;
-    max-height: 90%;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    display: block;
   }
 
   :global(#svg-content-wrapper g.segment path),
   :global(#svg-content-wrapper path) {
-    transition: stroke-width 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
+    transition: stroke 0.15s ease, filter 0.15s ease;
     cursor: pointer;
     vector-effect: non-scaling-stroke;
   }
 
   :global(#svg-content-wrapper g.segment path:hover) {
     filter: drop-shadow(0 0 4px rgba(255, 0, 0, 0.6));
+  }
+
+  :global(#svg-content-wrapper .station-dot) {
+    cursor: pointer;
+    transition: fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
+  }
+
+  :global(#svg-content-wrapper .station-dot:hover) {
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.7));
   }
 
   /* HUD Controls */

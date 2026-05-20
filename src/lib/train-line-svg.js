@@ -3,27 +3,127 @@ import { getLineColor } from "./line-colors.js";
 
 const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
 
+const escape_xml = (value) => {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+};
+
+const fallback_color_for_line = (company_name, line_name) => {
+  let key = `${company_name || ""}:${line_name || ""}`;
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash + key.charCodeAt(i) * (i + 1)) % colors.length;
+  }
+  return colors[hash];
+};
+
+const color_for_line = (company_name, line_name, options = {}) => {
+  if (options.showLineColors === false) {
+    return "ffffff";
+  }
+
+  return (
+    getLineColor(company_name, line_name) ||
+    fallback_color_for_line(company_name, line_name)
+  );
+};
+
+const lighten_color = (hex_color, amount = 0.65) => {
+  let color = hex_color.replace("#", "");
+  if (color.length !== 6) {
+    return hex_color;
+  }
+
+  let red = parseInt(color.slice(0, 2), 16);
+  let green = parseInt(color.slice(2, 4), 16);
+  let blue = parseInt(color.slice(4, 6), 16);
+
+  let mix = (value) => {
+    return Math.round(value + (255 - value) * amount)
+      .toString(16)
+      .padStart(2, "0");
+  };
+
+  return `${mix(red)}${mix(green)}${mix(blue)}`;
+};
+
+const features_for_line = (
+  geojson,
+  company_name_pattern,
+  line_name_pattern
+) => {
+  let features = [];
+  if (!geojson?.features) {
+    return features;
+  }
+
+  let line_name_re = line_name_pattern ? new RegExp(line_name_pattern, "i") : null;
+  let company_name_re = company_name_pattern ? new RegExp(company_name_pattern, "i") : null;
+
+  for (var feature of geojson.features) {
+    let line_name = feature.properties["路線名"];
+    let company_name = feature.properties["運営会社"];
+    if (company_name_re && !company_name_re.test(company_name)) {
+      continue;
+    }
+    if (line_name_re && !line_name_re.test(line_name)) {
+      continue;
+    }
+    features.push(feature);
+  }
+
+  return features;
+};
+
 const segments_for_line = (
   geojson,
   company_name_pattern,
   line_name_pattern
 ) => {
-  let segments = [];
-  let line_name_re = new RegExp(line_name_pattern, "i");
-  let company_name_re = new RegExp(company_name_pattern, "i");
-
-  for (var feature of geojson.features) {
-    let line_name = feature.properties["路線名"];
-    let company_name = feature.properties["運営会社"];
-    if (!company_name_pattern || company_name_re.test(company_name)) {
-      if (!line_name_pattern || line_name_re.test(line_name)) {
-        segments.push(feature);
-      }
-    }
-  }
-
+  let segments = features_for_line(
+    geojson,
+    company_name_pattern,
+    line_name_pattern
+  );
   const joinedSegments = joinSegments(segments);
   return joinedSegments;
+};
+
+const coordinates_for_feature = (feature) => {
+  if (!feature?.geometry) {
+    return [];
+  }
+
+  if (feature.geometry.type === "Point") {
+    return [feature.geometry.coordinates];
+  }
+
+  if (feature.geometry.type === "LineString") {
+    return feature.geometry.coordinates;
+  }
+
+  if (feature.geometry.type === "MultiLineString") {
+    return feature.geometry.coordinates.flat();
+  }
+
+  return [];
+};
+
+const point_for_feature = (feature) => {
+  let coordinates = coordinates_for_feature(feature);
+  if (!coordinates.length) {
+    return null;
+  }
+
+  let total = coordinates.reduce(
+    (sum, point) => [sum[0] + point[0], sum[1] + point[1]],
+    [0, 0]
+  );
+  return [total[0] / coordinates.length, total[1] / coordinates.length];
 };
 
 const bounding_box = (segments) => {
@@ -57,6 +157,7 @@ const bounding_box = (segments) => {
 
 export const svg_from_segments = (
   geojson,
+  station_geojson,
   region_name,
   company_name,
   line_name,
@@ -65,15 +166,21 @@ export const svg_from_segments = (
   options = {}
 ) => {
   let segments = [];
+  let stations = [];
   if (company_name) {
     segments = segments_for_line(geojson, company_name, line_name);
+    stations = features_for_line(station_geojson, company_name, line_name);
   } else if (region_name) {
     segments = geojson.features;
+    stations = station_geojson?.features || [];
   }
   if (correction) {
     for (var include of correction.includes) {
       segments = segments.concat(
         segments_for_line(geojson, include.company, include.line)
+      );
+      stations = stations.concat(
+        features_for_line(station_geojson, include.company, include.line)
       );
     }
     for (var filter of correction.filters) {
@@ -85,6 +192,19 @@ export const svg_from_segments = (
       let filter_b = bounding_box(filter_segments);
       segments = segments.filter((v, i, s) => {
         let p = v.geometry.coordinates[0];
+        return (
+          true &&
+          (!filter.within_x || p[0] <= filter_b.max_x) &&
+          (!filter.within_y || p[1] <= filter_b.max_y) &&
+          (!filter.within_x || p[0] >= filter_b.min_x) &&
+          (!filter.within_y || p[1] >= filter_b.min_y)
+        );
+      });
+      stations = stations.filter((station) => {
+        let p = point_for_feature(station);
+        if (!p) {
+          return false;
+        }
         return (
           true &&
           (!filter.within_x || p[0] <= filter_b.max_x) &&
@@ -108,9 +228,9 @@ export const svg_from_segments = (
     width_px = (height_px / height) * width;
   }
 
-  let svg_string = `<svg width="${width_px}px" height="${height_px}px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
+  let svg_string = `<svg width="${width_px}px" height="${height_px}px" viewBox="0 0 ${width_px} ${height_px}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
   svg_string +=
-    '  <g fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
+    '  <g data-map-layer fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
   let n = 1;
   for (var segment of segments) {
     let svg_points = "";
@@ -124,23 +244,32 @@ export const svg_from_segments = (
       }
     }
     let path_id = `path-${n}`;
-    
-    let strokeColor;
-    if (options.showLineColors === false) {
-      strokeColor = "ffffff"; // Monomap White
-    } else {
-      let segLine = segment.properties ? segment.properties["路線名"] : line_name;
-      let segCompany = segment.properties ? segment.properties["運営会社"] : company_name;
-      let matchedColor = getLineColor(segCompany, segLine);
-      if (matchedColor) {
-        strokeColor = matchedColor;
-      } else {
-        strokeColor = colors[n % colors.length];
-      }
-    }
+    let segLine = segment.properties ? segment.properties["路線名"] : line_name;
+    let segCompany = segment.properties ? segment.properties["運営会社"] : company_name;
+    let strokeColor = color_for_line(segCompany, segLine, options);
     n += 1;
     let svg_path = `  <path id="${path_id}" stroke="#${strokeColor}" stroke-width="2" vector-effect="non-scaling-stroke" d="${svg_points}"></path>\n`;
     svg_string += svg_path;
+  }
+
+  let station_n = 1;
+  for (var station of stations) {
+    let point = point_for_feature(station);
+    if (!point) {
+      continue;
+    }
+
+    var station_x = ((point[0] - b.min_x) * width_px) / width;
+    var station_y = height_px - ((point[1] - b.min_y) * height_px) / height;
+    let station_name = escape_xml(station.properties ? station.properties["駅名"] : "");
+    let station_id = `station-${station_n}`;
+    let station_line = station.properties ? station.properties["路線名"] : line_name;
+    let station_company = station.properties ? station.properties["運営会社"] : company_name;
+    let station_color = color_for_line(station_company, station_line, options);
+    let station_fill_color = lighten_color(station_color);
+    station_n += 1;
+    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="#${station_fill_color}" stroke="#${station_color}" stroke-width="2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
+    svg_string += station_svg;
   }
   svg_string += "</g>\n";
   svg_string += "</svg>\n";
