@@ -1,4 +1,4 @@
-import { pull, concat, map } from "lodash";
+import { pull, concat, map } from "lodash-es";
 
 import { lineNames } from "./train-lines.js";
 import { svg_from_segments } from "./train-line-svg.js";
