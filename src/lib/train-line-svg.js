@@ -1,4 +1,5 @@
 import { joinSegments } from "./train-lines.js";
+import { getLineColor } from "./line-colors.js";
 
 const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
 
@@ -34,6 +35,7 @@ const bounding_box = (segments) => {
       min_y = coordinates[0][1];
       max_x = coordinates[0][0];
       max_y = coordinates[0][1];
+      max_y = coordinates[0][1];
     }
     for (var c of coordinates) {
       if (c[0] < min_x) {
@@ -59,7 +61,8 @@ export const svg_from_segments = (
   company_name,
   line_name,
   max_dim = 2000,
-  correction = null
+  correction = null,
+  options = {}
 ) => {
   let segments = [];
   if (company_name) {
@@ -121,9 +124,22 @@ export const svg_from_segments = (
       }
     }
     let path_id = `path-${n}`;
-    let strokeColor = colors[n % colors.length];
+    
+    let strokeColor;
+    if (options.showLineColors === false) {
+      strokeColor = "ffffff"; // Monomap White
+    } else {
+      let segLine = segment.properties ? segment.properties["路線名"] : line_name;
+      let segCompany = segment.properties ? segment.properties["運営会社"] : company_name;
+      let matchedColor = getLineColor(segCompany, segLine);
+      if (matchedColor) {
+        strokeColor = matchedColor;
+      } else {
+        strokeColor = colors[n % colors.length];
+      }
+    }
     n += 1;
-    let svg_path = `  <path id="${path_id}" stroke="#${strokeColor}" stroke-width="2" d="${svg_points}"></path>\n`;
+    let svg_path = `  <path id="${path_id}" stroke="#${strokeColor}" stroke-width="2" vector-effect="non-scaling-stroke" d="${svg_points}"></path>\n`;
     svg_string += svg_path;
   }
   svg_string += "</g>\n";

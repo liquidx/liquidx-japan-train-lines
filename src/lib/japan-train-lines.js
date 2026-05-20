@@ -9,9 +9,18 @@ import {
 } from "./tokyo-train-lines.js";
 
 let _trainLines = {};
-let _tokyoTrainLines = {};
+let _regionsGeoJson = {};
 
-let _trainCompanyNames = [];
+export const regions = [
+  { id: "tokyo", name: "Tokyo", nameJa: "東京", bounds: { min_lng: 138.9114, max_lng: 139.9305, min_lat: 35.498, max_lat: 35.916 } },
+  { id: "kansai", name: "Kansai (Osaka/Kyoto)", nameJa: "関西", bounds: { min_lng: 134.8, max_lng: 136.2, min_lat: 34.2, max_lat: 35.4 } },
+  { id: "chubu", name: "Chubu (Nagoya)", nameJa: "中部", bounds: { min_lng: 136.2, max_lng: 137.6, min_lat: 34.6, max_lat: 35.6 } },
+  { id: "kyushu", name: "Kyushu (Fukuoka)", nameJa: "九州", bounds: { min_lng: 129.8, max_lng: 131.2, min_lat: 32.7, max_lat: 34.2 } },
+  { id: "hokkaido", name: "Hokkaido (Sapporo)", nameJa: "北海道", bounds: { min_lng: 140.7, max_lng: 142.1, min_lat: 42.5, max_lat: 43.6 } },
+  { id: "tohoku", name: "Tohoku (Sendai)", nameJa: "東北", bounds: { min_lng: 140.3, max_lng: 141.5, min_lat: 37.8, max_lat: 38.8 } },
+  { id: "japan", name: "All Japan", nameJa: "全国" }
+];
+
 let _prioritizedTrainCompanies = [
   "東京地下鉄",
   "東急電鉄",
@@ -29,7 +38,8 @@ export const drawTrainLine = (
   companyName,
   lineName,
   viewerEl,
-  width = 640
+  width = 640,
+  options = {}
 ) => {
   if (!viewerEl) {
     console.log("Error: viewerEl is null");
@@ -40,10 +50,7 @@ export const drawTrainLine = (
     trainLineCorrections[companyName][lineName];
 
   console.log(regionName, companyName, lineName);
-  let geojson = _trainLines;
-  if (regionName === "tokyo") {
-    geojson = _tokyoTrainLines;
-  }
+  let geojson = _regionsGeoJson[regionName] || _trainLines;
 
   let svg = svg_from_segments(
     geojson,
@@ -51,7 +58,8 @@ export const drawTrainLine = (
     companyName,
     lineName,
     width,
-    correction
+    correction,
+    options
   );
   viewerEl.innerHTML = svg;
 
@@ -69,12 +77,13 @@ export const drawTrainLine = (
 
 const getTrainCompanyNames = (train_lines) => {
   let companyNames = Object.keys(train_lines);
-  // Force a few companies to the at the top.
+  // Force a few companies to be at the top.
   companyNames = pull(companyNames, _prioritizedTrainCompanies);
   companyNames = concat(_prioritizedTrainCompanies, companyNames);
 
   let lines = [];
   for (const company_name of companyNames) {
+    if (!train_lines[company_name]) continue;
     let lineNames = Object.keys(train_lines[company_name]);
     lines.push({
       company: company_name,
@@ -88,7 +97,6 @@ const getTrainCompanyNames = (train_lines) => {
 const getTokyoGeoJson = (geojson) => {
   let features = [];
   let companyLines = [];
-  let tokyoBounds = { min_lat: 0, max_lat: 0, min_lng: 0, max_lng: 0 };
 
   for (var feature of geojson.features) {
     let line_name = feature.properties["路線名"];
@@ -105,10 +113,6 @@ const getTokyoGeoJson = (geojson) => {
       // Remove anything that is outside of Tokyo
       if (feature.geometry.type === "LineString") {
         let p = feature.geometry.coordinates[0];
-        // 35.49847384661725
-        // 35.91588996968289
-        // 138.91140168309812
-        // 139.93047276073878
         if (
           !(
             p[0] >= 138.9114 &&
@@ -123,7 +127,24 @@ const getTokyoGeoJson = (geojson) => {
       features.push(feature);
     }
   }
-  console.log(companyLines);
+  return { features };
+};
+
+const filterGeoJsonByBounds = (geojson, bounds) => {
+  let features = [];
+  for (var feature of geojson.features) {
+    if (feature.geometry.type === "LineString") {
+      let p = feature.geometry.coordinates[0];
+      if (
+        p[0] >= bounds.min_lng &&
+        p[0] <= bounds.max_lng &&
+        p[1] >= bounds.min_lat &&
+        p[1] <= bounds.max_lat
+      ) {
+        features.push(feature);
+      }
+    }
+  }
   return { features };
 };
 
@@ -133,15 +154,29 @@ export const loadTrainLines = async ({ railroadGeoJsonUrl }) => {
       return response.json();
     })
     .then((json) => {
-      // Store to a global
       _trainLines = json;
-      _tokyoTrainLines = getTokyoGeoJson(json);
-      let trainLineNames = lineNames(json);
-      _trainCompanyNames = getTrainCompanyNames(trainLineNames);
+      
+      // Cache GeoJSON slice for each region
+      _regionsGeoJson["japan"] = json;
+      _regionsGeoJson["tokyo"] = getTokyoGeoJson(json);
+
+      for (const r of regions) {
+        if (r.id !== "japan" && r.id !== "tokyo") {
+          _regionsGeoJson[r.id] = filterGeoJsonByBounds(json, r.bounds);
+        }
+      }
+
+      // Precalculate companies and lines lists per region
+      const regionData = {};
+      for (const r of regions) {
+        let rGeoJson = _regionsGeoJson[r.id];
+        let rLineNames = lineNames(rGeoJson);
+        regionData[r.id] = getTrainCompanyNames(rLineNames);
+      }
 
       return {
-        trainLines: _trainLines,
-        trainCompanyNames: _trainCompanyNames,
+        regions,
+        regionData,
       };
     });
 };
