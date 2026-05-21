@@ -311,27 +311,6 @@
       >
     </div>
 
-    <div class="flex items-center gap-4">
-      {#if selectedCompany}
-        <div
-          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-border text-xs"
-        >
-          <span class="text-accent-secondary">{selectedCompany}</span>
-          {#if selectedLine}
-            <span class="text-muted">→</span>
-            <span class="text-secondary">{selectedLine}</span>
-          {/if}
-        </div>
-      {:else}
-        <div
-          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-border text-xs"
-        >
-          <span class="font-medium text-accent-primary">
-            {regions.find((r) => r.id === selectedRegion)?.name || "All Japan"} Network
-          </span>
-        </div>
-      {/if}
-    </div>
   </header>
 
   <!-- Interactive Map Viewport -->
@@ -382,14 +361,29 @@
       </div>
     {/if}
 
-    <!-- Keyboard Hint -->
+    <!-- Line Info + Keyboard Hint -->
     <div
-      class="absolute bottom-5 left-5 text-[11px] text-[var(--color-text-muted)] bg-panel-background px-3 py-1.5 rounded border border-border pointer-events-none"
+      class="absolute bottom-5 left-5 bg-panel-background border border-border rounded-lg overflow-hidden pointer-events-none"
     >
-      Press <kbd
-        class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
-        >➔</kbd
-      > to cycle lines
+      <div class="px-3 py-2 border-b border-border text-xs">
+        {#if selectedCompany}
+          <span class="text-accent-secondary font-medium">{selectedCompany}</span>
+          {#if selectedLine}
+            <span class="text-muted mx-1.5">→</span>
+            <span class="text-secondary">{selectedLine}</span>
+          {/if}
+        {:else}
+          <span class="font-medium text-accent-primary">
+            {regions.find((r) => r.id === selectedRegion)?.name || "All Japan"} Network
+          </span>
+        {/if}
+      </div>
+      <div class="px-3 py-1.5 text-[11px] text-[var(--color-text-muted)]">
+        Press <kbd
+          class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
+          >➔</kbd
+        > to cycle lines
+      </div>
     </div>
   </div>
 
