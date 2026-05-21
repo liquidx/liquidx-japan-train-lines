@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
+  import { lineNameMapping, companyNameMapping } from "$lib/line-name-mapping.js";
   import {
     Eye,
     EyeOff,
@@ -20,7 +21,7 @@
   let regions = [];
   let regionDataMap = {};
   let trainCompanyNames = [];
-  let selectedRegion = "kanto";
+  let selectedRegion = "tokyo";
   let selectedCompany = null;
   let selectedLine = null;
   let showLineColors = true;
@@ -591,8 +592,11 @@
             >
               <div class="flex items-center gap-3">
                 <span class="text-[16px] opacity-80">🏢</span>
-                <div class="flex flex-col">
+                <div class="flex flex-col min-w-0">
                   <span class="text-sm font-medium">{company.company}</span>
+                  {#if companyNameMapping[company.company]?.en}
+                    <span class="text-[10px] opacity-60 mt-[1px]">{companyNameMapping[company.company].en}</span>
+                  {/if}
                   <span
                     class="text-[10px] mt-[1px] transition-colors {selectedCompany ===
                     company.company
@@ -652,7 +656,14 @@
                       ? 'var(--color-accent-tertiary)'
                       : 'var(--color-text-faint)'}"
                   ></span>
-                  <span class="text-sm font-medium">{line}</span>
+                  <span class="flex flex-col min-w-0">
+                    <span class="text-sm font-medium">{line}</span>
+                    {#if lineNameMapping[line]?.en}
+                      <span class="text-[10px] opacity-60 mt-[1px]"
+                        >{lineNameMapping[line].en}</span
+                      >
+                    {/if}
+                  </span>
                 </button>
               {/each}
             </div>
