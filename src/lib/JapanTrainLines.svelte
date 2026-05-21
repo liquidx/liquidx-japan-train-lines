@@ -8,6 +8,7 @@
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
   export let japanOutlineGeoJsonUrl = null;
+  export let mapPadding = 0.05;
   let viewerEl;
   let svgViewerEl;
   let hoveredStation = null;
@@ -19,6 +20,8 @@
   let selectedLine = null;
   let showLineColors = true;
   let showBaseMapOutline = true;
+  let forceShowStations = false;
+  let stationSizeMultiplier = 1;
   let mapTheme = "dark";
   let mapInfo = null;
 
@@ -99,8 +102,8 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations = computePixelsPerDegree(mapInfo, zoom) > 700;
-    const adjustedStationRadius = stationRadiusForZoom(zoom) / screenScale;
+    const showStations = forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
+    const adjustedStationRadius = (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
       station.setAttribute("r", adjustedStationRadius);
       station.style.display = showStations ? "" : "none";
@@ -127,12 +130,12 @@
       selectedLine,
       viewerEl,
       640,
-      { showLineColors, showBaseMapOutline, mapTheme },
+      { showLineColors, showBaseMapOutline, mapTheme, padding: mapPadding },
     );
     applyMapTransform();
   }
 
-  $: mapTransform = { zoom, panX, panY };
+  $: mapTransform = { zoom, panX, panY, forceShowStations, stationSizeMultiplier };
   $: if (viewerEl && mapTransform) {
     applyMapTransform();
   }
@@ -404,6 +407,8 @@
       bind:mapTheme
       bind:showLineColors
       bind:showBaseMapOutline
+      bind:forceShowStations
+      bind:stationSizeMultiplier
       on:zoomIn={zoomIn}
       on:zoomOut={zoomOut}
       on:reset={handleReset}

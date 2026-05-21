@@ -83,6 +83,9 @@
   --color-accent-secondary: var(--color-accent-secondary);
   --color-accent-tertiary: var(--color-accent-tertiary);
 
+  --color-selected-background: var(--color-accent-primary-soft);
+  --color-chip-background: var(--color-accent-secondary-soft);
+
   --color-border: var(--color-border);
 
   --text-xxs: 0.6rem;

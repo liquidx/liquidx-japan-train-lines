@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import {
     ChevronUp,
+    Circle,
     Eye,
     EyeOff,
     Minus,
@@ -12,10 +13,13 @@
     SlidersHorizontal,
     Sun,
   } from "@lucide/svelte";
+  import ToggleOption from "$lib/ToggleOption.svelte";
 
   export let mapTheme = "dark";
   export let showLineColors = true;
   export let showBaseMapOutline = true;
+  export let forceShowStations = false;
+  export let stationSizeMultiplier = 1;
 
   let collapsed = true;
 
@@ -112,79 +116,75 @@
           </button>
         </div>
 
-        <button
-          class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-border"
-          on:click={() => (showLineColors = !showLineColors)}
-          aria-pressed={showLineColors}
+        <ToggleOption
+          bind:checked={showLineColors}
+          label="Line colors"
+          description={showLineColors
+            ? "Official colors where available"
+            : "Single-color rendering"}
+          color="var(--color-accent-primary)"
         >
-          <span class="flex items-center gap-2.5 min-w-0">
-            <Palette
-              size={16}
-              strokeWidth={2.2}
-              class={showLineColors ? "text-primary" : "text-muted"}
-            />
-            <span class="flex flex-col min-w-0 leading-tight">
-              <span class="text-xs font-medium text-secondary">Line colors</span
-              >
-              <span class="text-[10px] text-muted truncate"
-                >{showLineColors
-                  ? "Official colors where available"
-                  : "Single-color rendering"}</span
-              >
-            </span>
-          </span>
-          <span
-            class="w-[34px] h-[18px] rounded-full relative shrink-0 transition-colors duration-200 {showLineColors
-              ? 'bg-accent-primary'
-              : 'bg-[var(--color-switch-off)]'}"
-          >
-            <span
-              class="w-3 h-3 rounded-full bg-[var(--color-switch-knob)] absolute top-[3px] left-[3px] transition-transform duration-200 {showLineColors
-                ? 'translate-x-4'
-                : 'translate-x-0'}"
-            ></span>
-          </span>
-        </button>
+          <Palette
+            size={16}
+            strokeWidth={2.2}
+            class={showLineColors ? "text-primary" : "text-muted"}
+          />
+        </ToggleOption>
 
-        <button
-          class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-border"
-          on:click={() => (showBaseMapOutline = !showBaseMapOutline)}
-          aria-pressed={showBaseMapOutline}
+        <ToggleOption
+          bind:checked={showBaseMapOutline}
+          label="Base map outline"
+          description={showBaseMapOutline
+            ? "Land outline visible"
+            : "Land outline hidden"}
+          color="var(--color-accent-tertiary)"
         >
-          <span class="flex items-center gap-2.5 min-w-0">
-            {#if showBaseMapOutline}
-              <Eye
-                size={16}
-                strokeWidth={2.2}
-                class="text-[var(--color-accent-tertiary)]"
-              />
-            {:else}
-              <EyeOff size={16} strokeWidth={2.2} class="text-muted" />
-            {/if}
-            <span class="flex flex-col min-w-0 leading-tight">
-              <span
-                class="text-xs font-medium text-[var(--color-text-secondary)]"
-                >Base map outline</span
-              >
-              <span class="text-[10px] text-muted truncate"
-                >{showBaseMapOutline
-                  ? "Land outline visible"
-                  : "Land outline hidden"}</span
-              >
-            </span>
-          </span>
-          <span
-            class="w-[34px] h-[18px] rounded-full relative shrink-0 transition-colors duration-200 {showBaseMapOutline
-              ? 'bg-[var(--color-accent-tertiary)]'
-              : 'bg-[var(--color-switch-off)]'}"
-          >
-            <span
-              class="w-3 h-3 rounded-full bg-[var(--color-switch-knob)] absolute top-[3px] left-[3px] transition-transform duration-200 {showBaseMapOutline
-                ? 'translate-x-4'
-                : 'translate-x-0'}"
-            ></span>
-          </span>
-        </button>
+          {#if showBaseMapOutline}
+            <Eye size={16} strokeWidth={2.2} class="text-[var(--color-accent-tertiary)]" />
+          {:else}
+            <EyeOff size={16} strokeWidth={2.2} class="text-muted" />
+          {/if}
+        </ToggleOption>
+
+        <ToggleOption
+          bind:checked={forceShowStations}
+          label="Stations"
+          description={forceShowStations
+            ? "Always visible"
+            : "Visible when zoomed in"}
+          color="var(--color-accent-secondary)"
+        >
+          <Circle
+            size={16}
+            strokeWidth={2.2}
+            class={forceShowStations
+              ? "text-[var(--color-accent-secondary)]"
+              : "text-muted"}
+          />
+        </ToggleOption>
+
+        <div class="px-2.5 py-2">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-medium text-[var(--color-text-secondary)]"
+              >Station size</span
+            >
+            <span class="text-[10px] text-muted tabular-nums"
+              >{stationSizeMultiplier.toFixed(1)}×</span
+            >
+          </div>
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.1"
+            bind:value={stationSizeMultiplier}
+            class="w-full h-1 rounded-full appearance-none cursor-pointer bg-[var(--color-switch-off)] accent-[var(--color-accent-secondary)]"
+          />
+          <div class="flex justify-between mt-1">
+            <span class="text-[9px] text-muted">0.5×</span>
+            <span class="text-[9px] text-muted">3×</span>
+          </div>
+        </div>
       </div>
     {/if}
   </div>

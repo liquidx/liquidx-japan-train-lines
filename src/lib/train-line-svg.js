@@ -255,6 +255,17 @@ export const svg_from_segments = (
   if (!b) {
     b = bounding_box(segments);
   }
+
+  const paddingFraction = options.padding ?? 0.05;
+  const bw = b.max_x - b.min_x;
+  const bh = b.max_y - b.min_y;
+  b = {
+    min_x: b.min_x - bw * paddingFraction,
+    max_x: b.max_x + bw * paddingFraction,
+    min_y: b.min_y - bh * paddingFraction,
+    max_y: b.max_y + bh * paddingFraction,
+  };
+
   let width = b.max_x - b.min_x;
   let height = b.max_y - b.min_y;
   let width_px, height_px;
