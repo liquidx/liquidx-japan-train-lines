@@ -28,9 +28,9 @@ export const prioritizedTrainCompanies = [
     // Kyushu
     "九州旅客鉄道",
     "福岡市",
+    "長崎電気軌道",
     "西日本鉄道",
     "筑豊電気鉄道",
     "北九州高速鉄道",
-    "長崎電気軌道",
     "平成筑豊鉄道",
 ];
