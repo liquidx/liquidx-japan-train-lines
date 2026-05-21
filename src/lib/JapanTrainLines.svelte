@@ -140,7 +140,11 @@
     params.set("region", selectedRegion);
     if (selectedCompany) params.set("company", selectedCompany);
     if (selectedLine) params.set("line", selectedLine);
-    window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${params}`,
+    );
   }
 
   // Reactive redraw whenever region, company, line, or render option changes
@@ -182,7 +186,11 @@
     const y = (point.y - panY) / zoom;
     let newZoom = zoom * factor;
     // Limit zoom scale range
-    newZoom = Math.max(0.15, Math.min(20, newZoom));
+    //newZoom = Math.max(0.15, Math.min(20, newZoom));
+    const pxPerDeg = computePixelsPerDegree(mapInfo, newZoom);
+    if (pxPerDeg < 30) newZoom = zoom;
+    if (pxPerDeg > 10000) newZoom = zoom;
+
     panX = point.x - x * newZoom;
     panY = point.y - y * newZoom;
     zoom = newZoom;
