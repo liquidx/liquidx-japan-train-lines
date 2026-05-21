@@ -218,6 +218,11 @@
     window.removeEventListener("mouseup", handleMouseUp);
   };
 
+  const handleDoubleClick = (e) => {
+    if (e.target.closest(".hud-controls")) return;
+    zoomToPoint(clientPointToSvgPoint(e.clientX, e.clientY), 2);
+  };
+
   const selectRegion = (regionId) => {
     selectedRegion = regionId;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
@@ -337,6 +342,7 @@
     aria-label="Interactive train map viewer"
     bind:this={svgViewerEl}
     on:mousedown={handleMouseDown}
+    on:dblclick={handleDoubleClick}
     on:wheel={handleWheel}
     on:mouseover={handleStationMouseOver}
     on:mouseout={handleStationMouseOut}
