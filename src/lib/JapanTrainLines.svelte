@@ -15,7 +15,7 @@
   let regions = [];
   let regionDataMap = {};
   let trainCompanyNames = [];
-  let selectedRegion = "tokyo";
+  let selectedRegion = "kanto";
   let selectedCompany = null;
   let selectedLine = null;
   let showLineColors = true;
