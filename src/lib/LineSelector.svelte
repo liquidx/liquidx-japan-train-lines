@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from "svelte";
   import { ArrowLeft, ChevronDown, ChevronUp } from "@lucide/svelte";
+  import { companyNameMapping, lineNameMapping } from "$lib/line-name-mapping";
   import CompanyCell from "$lib/CompanyCell.svelte";
   import LineCell from "$lib/LineCell.svelte";
 
@@ -29,6 +30,23 @@
     mobileShowLines = false;
   };
 
+  const linePrimaryName = (selectedLine) => {
+    if (lineNameMapping[selectedLine] && lineNameMapping[selectedLine].ja) {
+      return lineNameMapping[selectedLine].ja;
+    }
+    return selectedLine;
+  };
+
+  const companyPrimaryName = (selectedCompany) => {
+    if (
+      companyNameMapping[selectedCompany] &&
+      companyNameMapping[selectedCompany].ja
+    ) {
+      return companyNameMapping[selectedCompany].ja;
+    }
+    return selectedCompany;
+  };
+
   $: if (!selectedCompany) {
     mobileShowLines = false;
   }
@@ -53,11 +71,13 @@
     <div class="flex items-center gap-2 min-w-0 overflow-hidden text-sm">
       {#if selectedCompany}
         <span class="text-accent-secondary font-medium truncate"
-          >{selectedCompany}</span
+          >{companyPrimaryName(selectedCompany)}</span
         >
         {#if selectedLine}
           <span class="text-muted shrink-0">→</span>
-          <span class="text-secondary truncate">{selectedLine}</span>
+          <span class="text-secondary truncate"
+            >{linePrimaryName(selectedLine)}</span
+          >
         {/if}
       {:else}
         <span class="text-muted">

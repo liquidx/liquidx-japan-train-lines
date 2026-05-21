@@ -3,6 +3,13 @@
 
   export let company; // { company: string, lines: string[] }
   export let selected = false;
+
+  const companyLinePrimaryName = (c) => {
+    if (companyNameMapping[c] && companyNameMapping[c].ja) {
+      return companyNameMapping[c].ja;
+    }
+    return c;
+  };
 </script>
 
 <button
@@ -16,7 +23,9 @@
       ? 'text-accent-primary'
       : 'text-muted'}"
   >
-    <span class="text-sm font-medium">{company.company}</span>
+    <span class="text-sm font-medium"
+      >{companyLinePrimaryName(company.company)}</span
+    >
     {#if companyNameMapping[company.company]?.en}
       <span class="text-xxs">{companyNameMapping[company.company].en}</span>
     {/if}

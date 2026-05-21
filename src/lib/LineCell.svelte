@@ -1,5 +1,8 @@
 <script>
-  import { lineNameMapping } from "$lib/line-name-mapping.js";
+  import {
+    lineNameMapping,
+    companyNameMapping,
+  } from "$lib/line-name-mapping.js";
   import { getLineColor } from "$lib/line-colors.js";
 
   export let line;
@@ -10,6 +13,13 @@
     const hex = getLineColor(c, l);
     return hex ? `#${hex}` : "var(--color-text-faint)";
   };
+
+  const linePrimaryName = (l) => {
+    if (lineNameMapping[l] && lineNameMapping[l].ja) {
+      return lineNameMapping[l].ja;
+    }
+    return l;
+  };
 </script>
 
 <button
@@ -19,7 +29,7 @@
   on:click
 >
   <span class="flex flex-col min-w-0">
-    <span class="text-sm font-medium">{line}</span>
+    <span class="text-sm font-medium">{linePrimaryName(line)}</span>
     {#if lineNameMapping[line]?.en}
       <span class="text-[10px] opacity-60 mt-[1px]"
         >{lineNameMapping[line].en}</span
