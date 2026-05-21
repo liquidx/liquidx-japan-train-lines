@@ -68,6 +68,23 @@
   --shadow-panel: 0 12px 30px -14px rgb(15 23 42 / 0.38);
 }
 
+@theme inline {
+  --font-sans: "Victor Mono", monospace;
+
+  --color-background: var(--color-app-bg);
+  --color-panel-background: var(--color-header-bg);
+
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-muted: var(--color-text-muted);
+  --color-very-muted: var(--color-text-faint);
+
+  --color-accent-primary: var(--color-accent-primary);
+  --color-accent-secondary: var(--color-accent-secondary);
+  --color-accent-tertiary: var(--color-accent-tertiary);
+}
+
+
 .map-viewport {
   background-color: var(--color-map-bg);
   background-image:

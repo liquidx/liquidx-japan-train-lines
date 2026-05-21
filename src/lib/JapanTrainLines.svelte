@@ -91,7 +91,6 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    console.log("screenCtm", screenCtm);
     const showStations = zoom > 2;
     const adjustedStationRadius = stationRadiusForZoom(zoom) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
@@ -267,21 +266,18 @@
 
 <div
   id="app-container"
-  class="theme-{mapTheme} flex flex-col h-screen w-screen bg-[var(--color-app-bg)] overflow-hidden transition-colors duration-200"
+  class="theme-{mapTheme} flex flex-col h-screen w-screen bg-background overflow-hidden transition-colors duration-200"
 >
   <!-- Title / Header Overlay -->
   <header
-    class="h-[60px] bg-[var(--color-header-bg)] backdrop-blur-md border-b border-[color:var(--color-border)] flex justify-between items-center px-6 z-10 transition-colors duration-200"
+    class="h-16 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center px-6 z-10 transition-colors duration-200"
   >
     <div class="flex items-center gap-2.5">
-      <span class="text-[20px]">🚇</span>
-      <h1
-        class="font-['Outfit'] text-[18px] font-semibold m-0 text-[var(--color-text-primary)]"
-      >
+      <span class="text-xl">🚇</span>
+      <h1 class="text-md font-semibold m-0 text-primary">
         Japan Train Line Maps
       </h1>
-      <span
-        class="text-[12px] text-[var(--color-text-muted)] ml-1.5 pl-3 border-l border-[color:var(--color-border)]"
+      <span class="text-xs text-muted ml-1.5 pl-3 border-l border-border"
         >鉄道路線図</span
       >
     </div>
@@ -289,23 +285,19 @@
     <div class="flex items-center gap-4">
       {#if selectedCompany}
         <div
-          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-[color:var(--color-border)] text-[13px]"
+          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-border text-xs"
         >
-          <span class="font-medium text-[var(--color-accent-secondary)]"
-            >{selectedCompany}</span
-          >
+          <span class="text-accent-secondary">{selectedCompany}</span>
           {#if selectedLine}
-            <span class="text-[var(--color-text-faint)]">→</span>
-            <span class="text-[var(--color-text-secondary)]"
-              >{selectedLine}</span
-            >
+            <span class="text-muted">→</span>
+            <span class="text-secondary">{selectedLine}</span>
           {/if}
         </div>
       {:else}
         <div
-          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-[color:var(--color-border)] text-[13px]"
+          class="flex items-center gap-2 bg-[var(--color-surface-soft)] px-3.5 py-1.5 rounded-full border border-border text-xs"
         >
-          <span class="font-medium text-[var(--color-accent-primary)]">
+          <span class="font-medium text-accent-primary">
             {regions.find((r) => r.id === selectedRegion)?.name || "All Japan"} Network
           </span>
         </div>
@@ -321,7 +313,7 @@
     aria-label="Interactive train map viewer"
     on:mousedown={handleMouseDown}
     on:wheel={handleWheel}
-    class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-[color:var(--color-border)] transition-colors duration-200"
+    class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-border transition-colors duration-200"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
     <div
@@ -336,10 +328,10 @@
       class="hud-controls absolute top-5 right-5 flex items-start gap-3 z-[5]"
     >
       <div
-        class="w-[232px] bg-[var(--color-surface)] backdrop-blur-md rounded-xl border border-[color:var(--color-border)] shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200"
+        class="w-[232px] bg-panel-background backdrop-blur-md rounded-xl border border-border shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200"
       >
         <div
-          class="h-10 flex items-center gap-2 px-3.5 border-b border-[color:var(--color-border)] bg-[var(--color-surface-soft)]"
+          class="h-10 flex items-center gap-2 px-3.5 border-b border-border bg-[var(--color-surface-soft)]"
         >
           <SlidersHorizontal
             size={15}
@@ -382,7 +374,7 @@
           </div>
 
           <button
-            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-[color:var(--color-border)]"
+            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-border"
             on:click={() => (showLineColors = !showLineColors)}
             aria-pressed={showLineColors}
           >
@@ -390,17 +382,13 @@
               <Palette
                 size={16}
                 strokeWidth={2.2}
-                class={showLineColors
-                  ? "text-[var(--color-accent-primary)]"
-                  : "text-[var(--color-text-muted)]"}
+                class={showLineColors ? "text-primary" : "text-muted"}
               />
               <span class="flex flex-col min-w-0 leading-tight">
-                <span
-                  class="text-[12px] font-semibold text-[var(--color-text-secondary)]"
+                <span class="text-xs font-semibold text-secondary"
                   >Line colors</span
                 >
-                <span
-                  class="text-[10px] text-[var(--color-text-muted)] truncate"
+                <span class="text-[10px] text-muted truncate"
                   >{showLineColors
                     ? "Official colors where available"
                     : "Single-color rendering"}</span
@@ -409,7 +397,7 @@
             </span>
             <span
               class="w-[34px] h-[18px] rounded-full relative shrink-0 transition-colors duration-200 {showLineColors
-                ? 'bg-[var(--color-accent-primary)]'
+                ? 'bg-accent-primary'
                 : 'bg-[var(--color-switch-off)]'}"
             >
               <span
@@ -421,7 +409,7 @@
           </button>
 
           <button
-            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-[color:var(--color-border)]"
+            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-border"
             on:click={() => (showBaseMapOutline = !showBaseMapOutline)}
             aria-pressed={showBaseMapOutline}
           >
@@ -441,7 +429,7 @@
               {/if}
               <span class="flex flex-col min-w-0 leading-tight">
                 <span
-                  class="text-[12px] font-semibold text-[var(--color-text-secondary)]"
+                  class="text-xs font-semibold text-[var(--color-text-secondary)]"
                   >Base map outline</span
                 >
                 <span
@@ -468,7 +456,7 @@
       </div>
 
       <div
-        class="flex flex-col gap-2 bg-[var(--color-surface)] backdrop-blur-md p-1.5 rounded-xl border border-[color:var(--color-border)] shadow-[var(--shadow-panel)]"
+        class="flex flex-col gap-2 bg-panel-background backdrop-blur-md p-1.5 rounded-xl border border-border shadow-[var(--shadow-panel)]"
       >
         <button
           on:click={zoomIn}
@@ -499,10 +487,10 @@
 
     <!-- Keyboard Hint -->
     <div
-      class="absolute bottom-5 left-5 text-[11px] text-[var(--color-text-muted)] bg-[var(--color-surface)] px-3 py-1.5 rounded border border-[color:var(--color-border-soft)] pointer-events-none"
+      class="absolute bottom-5 left-5 text-[11px] text-[var(--color-text-muted)] bg-panel-background px-3 py-1.5 rounded border border-[color:var(--color-border-soft)] pointer-events-none"
     >
       Press <kbd
-        class="bg-[var(--color-surface-soft)] border border-[color:var(--color-border)] rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
+        class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
         >➔</kbd
       > to cycle lines
     </div>
@@ -515,7 +503,7 @@
   >
     <!-- Region Selector Tabs -->
     <div
-      class="flex bg-[var(--color-panel-strong)] border-b border-[color:var(--color-border)] px-4 gap-1.5 h-12 items-center overflow-x-auto scrollbar-thin"
+      class="flex bg-[var(--color-panel-strong)] border-b border-border px-4 gap-1.5 h-12 items-center overflow-x-auto scrollbar-thin"
     >
       {#each regions as r}
         <button
@@ -542,13 +530,13 @@
     <div class="flex flex-1 overflow-hidden">
       <!-- Left Column: Operating Companies -->
       <div
-        class="flex flex-col h-full w-[320px] border-r border-[color:var(--color-border)] bg-[var(--color-panel-muted)]"
+        class="flex flex-col h-full w-[320px] border-r border-border bg-[var(--color-panel-muted)]"
       >
         <div
           class="h-12 flex justify-between items-center px-5 border-b border-[color:var(--color-border-soft)] bg-[var(--color-surface-soft)]"
         >
           <h2
-            class="font-['Outfit'] text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
+            class=" text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
           >
             Operating Companies
           </h2>
@@ -568,7 +556,7 @@
             <div class="flex items-center gap-3">
               <span class="text-[16px] opacity-80">🌐</span>
               <div class="flex flex-col">
-                <span class="text-[13px] font-medium">
+                <span class="text-sm font-medium">
                   {regions.find((r) => r.id === selectedRegion)?.nameJa ||
                     "全国"} Map
                 </span>
@@ -594,7 +582,7 @@
               <div class="flex items-center gap-3">
                 <span class="text-[16px] opacity-80">🏢</span>
                 <div class="flex flex-col">
-                  <span class="text-[13px] font-medium">{company.company}</span>
+                  <span class="text-sm font-medium">{company.company}</span>
                   <span
                     class="text-[10px] mt-[1px] transition-colors {selectedCompany ===
                     company.company
@@ -615,7 +603,7 @@
           class="h-12 flex justify-between items-center px-5 border-b border-[color:var(--color-border-soft)] bg-[var(--color-surface-soft)]"
         >
           <h2
-            class="font-['Outfit'] text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
+            class=" text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
           >
             {#if selectedCompany}
               {selectedCompany} Lines
@@ -642,7 +630,7 @@
             >
               {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line}
                 <button
-                  class="group w-full border bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 flex items-center gap-2.5 p-[12px_16px] rounded-lg border-[color:var(--color-border-soft)] hover:bg-[var(--color-surface-hover)] hover:border-[color:var(--color-border)] hover:text-[var(--color-text-primary)] {selectedLine ===
+                  class="group w-full border bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 flex items-center gap-2.5 p-[12px_16px] rounded-lg border-[color:var(--color-border-soft)] hover:bg-[var(--color-surface-hover)] hover:border-border hover:text-[var(--color-text-primary)] {selectedLine ===
                   line
                     ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
                     : ''}"
@@ -654,7 +642,7 @@
                       ? 'var(--color-accent-tertiary)'
                       : 'var(--color-text-faint)'}"
                   ></span>
-                  <span class="text-[13px] font-medium">{line}</span>
+                  <span class="text-sm font-medium">{line}</span>
                 </button>
               {/each}
             </div>
@@ -665,11 +653,11 @@
               <div class="max-w-[380px]">
                 <span class="text-[32px] block mb-3 opacity-50">🗺️</span>
                 <h3
-                  class="font-['Outfit'] text-[var(--color-text-muted)] text-[16px] font-semibold m-[0_0_6px_0]"
+                  class=" text-[var(--color-text-muted)] text-[16px] font-semibold m-[0_0_6px_0]"
                 >
                   No Company Selected
                 </h3>
-                <p class="text-[12px] leading-relaxed m-0">
+                <p class="text-xs leading-relaxed m-0">
                   Choose a railway operating company from the left panel to
                   browse and visualize individual train lines, or view the
                   complete metropolitan map.
