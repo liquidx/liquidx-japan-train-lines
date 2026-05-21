@@ -26,66 +26,66 @@
   const dispatch = createEventDispatcher();
 </script>
 
-<!-- Zoom Controls (top-right) -->
-<div class="hud-controls absolute top-5 right-5 z-[5]">
-  <div
-    class="flex flex-col gap-2 bg-panel-background backdrop-blur-md p-1.5 rounded-xl border border-border shadow-[var(--shadow-panel)]"
-  >
-    <button
-      on:click={() => dispatch("zoomIn")}
-      title="Zoom In"
-      aria-label="Zoom In"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
-    >
-      <Plus size={18} strokeWidth={2.5} />
-    </button>
-    <button
-      on:click={() => dispatch("zoomOut")}
-      title="Zoom Out"
-      aria-label="Zoom Out"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
-    >
-      <Minus size={18} strokeWidth={2.5} />
-    </button>
-    <button
-      on:click={() => dispatch("reset")}
-      title="Reset View"
-      aria-label="Reset View"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
-    >
-      <RotateCcw size={16} strokeWidth={2.5} />
-    </button>
-  </div>
-</div>
-
-<!-- Map Appearance Panel (bottom-right, collapsible) -->
-<div class="hud-controls absolute bottom-5 right-5 z-[5] w-54">
+<!-- Map Appearance Panel (bottom-right, collapsible) with zoom controls in header -->
+<div class="hud-controls absolute bottom-5 right-5 z-10 max-w-84">
   <div
     class="bg-panel-background backdrop-blur-md rounded-xl border border-border shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200"
   >
-    <button
-      class="w-full h-10 flex items-center gap-2 px-3.5 bg-[var(--color-surface-soft)] cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
-      on:click={() => (collapsed = !collapsed)}
-      aria-expanded={!collapsed}
+    <div
+      class="w-full h-10 flex items-center bg-[var(--color-surface-soft)] transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
     >
-      <SlidersHorizontal
-        size={15}
-        strokeWidth={2.3}
-        class="text-[var(--color-accent-tertiary)]"
-      />
-      <h2
-        class="m-0 text-[11px] font-medium uppercase tracking-[0.6px] text-[var(--color-text-secondary)] flex-1 text-left"
+      <button
+        class="flex items-center gap-2 px-3 flex-1 h-full cursor-pointer"
+        on:click={() => (collapsed = !collapsed)}
+        aria-expanded={!collapsed}
       >
-        Map Appearance
-      </h2>
-      <ChevronUp
-        size={13}
-        strokeWidth={2.5}
-        class="text-muted transition-transform duration-200 {collapsed
-          ? 'rotate-180'
-          : ''}"
-      />
-    </button>
+        <SlidersHorizontal
+          size={15}
+          strokeWidth={2.3}
+          class="text-[var(--color-accent-tertiary)]"
+        />
+        <h2
+          class="m-0 text-[11px] font-medium uppercase tracking-[0.6px] text-[var(--color-text-secondary)] flex-1 text-left"
+        >
+          Map Appearance
+        </h2>
+        <ChevronUp
+          size={13}
+          strokeWidth={2.5}
+          class="text-muted transition-transform duration-200 {collapsed
+            ? 'rotate-180'
+            : ''}"
+        />
+      </button>
+      <div
+        class="flex items-center gap-0.5 pr-1.5 pl-1 border-l border-border h-7"
+      >
+        <button
+          on:click|stopPropagation={() => dispatch("zoomIn")}
+          title="Zoom In"
+          aria-label="Zoom In"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <Plus size={14} strokeWidth={2.5} />
+        </button>
+        <button
+          on:click|stopPropagation={() => dispatch("zoomOut")}
+          title="Zoom Out"
+          aria-label="Zoom Out"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <Minus size={14} strokeWidth={2.5} />
+        </button>
+        <button
+          on:click|stopPropagation={() => dispatch("reset")}
+          title="Reset View"
+          aria-label="Reset View"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <RotateCcw size={13} strokeWidth={2.5} />
+        </button>
+      </div>
+    </div>
 
     {#if !collapsed}
       <div class="p-2">

@@ -373,14 +373,12 @@
     class="py-4 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center px-6 z-10 transition-colors duration-200"
   >
     <div class="flex items-left gap-2 md:flex-row flex-col md:items-center">
-      <span class="text-xl">🚇</span>
       <h1 class="text-md font-medium m-0 text-primary">
-        Japan Train Lines by <a href="http://liquidx.net" class="underline"
-          >@liquidx</a
-        >
+        <span class="text-xl">🚇</span>
+        Japan Train Lines by
+        <a href="http://liquidx.net" class="underline">@liquidx</a>
       </h1>
-      <span class="text-md text-primary md:pl-3 md:border-l border-border"
-        >日本鉄道路線図</span
+      <span class="text-right text-md text-primary md:pl-3">日本鉄道路線図</span
       >
     </div>
   </header>
