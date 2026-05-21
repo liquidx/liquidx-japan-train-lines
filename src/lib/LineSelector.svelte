@@ -74,7 +74,8 @@
             <span class="text-[16px] opacity-80">🌐</span>
             <div class="flex flex-col">
               <span class="text-sm font-medium">
-                {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"} Map
+                {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
+                Map
               </span>
               <span
                 class="text-[10px] mt-[1px] transition-colors {selectedCompany ===
@@ -155,7 +156,8 @@
                 line
                   ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
                   : ''}"
-                on:click={() => dispatch("selectline", { company: selectedCompany, line })}
+                on:click={() =>
+                  dispatch("selectline", { company: selectedCompany, line })}
               >
                 <span
                   class="w-2 h-2 rounded-full shrink-0 transition-all duration-200 group-hover:scale-125"
@@ -186,9 +188,9 @@
                 No Company Selected
               </h3>
               <p class="text-xs leading-relaxed m-0">
-                Choose a railway operating company from the left panel to
-                browse and visualize individual train lines, or view the
-                complete metropolitan map.
+                Choose a railway operating company from the left panel to browse
+                and visualize individual train lines, or view the complete
+                metropolitan map.
               </p>
             </div>
           </div>

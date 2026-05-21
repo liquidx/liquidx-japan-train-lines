@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
   import { stationNameMapping } from "$lib/line-name-mapping.js";
-  import MapControls from "$lib/MapControls.svelte";
-  import ControlsPanel from "$lib/ControlsPanel.svelte";
+  import MapControls from "$lib/MapAppearanceControls.svelte";
+  import LineSelector from "$lib/LineSelector.svelte";
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
@@ -310,7 +310,6 @@
         >鉄道路線図</span
       >
     </div>
-
   </header>
 
   <!-- Interactive Map Viewport -->
@@ -353,7 +352,9 @@
       >
         {hoveredStation.name}
         {#if hoveredStation.nameEn}
-          <span class="block text-[11px] font-normal text-secondary mt-0.5">{hoveredStation.nameEn}</span>
+          <span class="block text-[11px] font-normal text-secondary mt-0.5"
+            >{hoveredStation.nameEn}</span
+          >
         {/if}
         <span class="block text-[10px] font-normal text-muted mt-0.5"
           >{hoveredStation.lineName}</span
@@ -367,7 +368,9 @@
     >
       <div class="px-3 py-2 border-b border-border text-xs">
         {#if selectedCompany}
-          <span class="text-accent-secondary font-medium">{selectedCompany}</span>
+          <span class="text-accent-secondary font-medium"
+            >{selectedCompany}</span
+          >
           {#if selectedLine}
             <span class="text-muted mx-1.5">→</span>
             <span class="text-secondary">{selectedLine}</span>
@@ -388,7 +391,7 @@
   </div>
 
   <!-- Controls Panel -->
-  <ControlsPanel
+  <LineSelector
     {regions}
     {trainCompanyNames}
     {selectedRegion}
