@@ -18,6 +18,7 @@
   let selectedRegion = "kanto";
   let selectedCompany = null;
   let selectedLine = null;
+  let urlSyncReady = false;
   let showLineColors = true;
   let showBaseMapOutline = true;
   let forceShowStations = false;
@@ -120,9 +121,27 @@
     });
     regions = data.regions;
     regionDataMap = data.regionData;
+
+    const params = new URLSearchParams(window.location.search);
+    const urlRegion = params.get("region");
+    const urlCompany = params.get("company");
+    const urlLine = params.get("line");
+    if (urlRegion) selectedRegion = urlRegion;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
+    if (urlCompany) selectedCompany = urlCompany;
+    if (urlLine) selectedLine = urlLine;
+
+    urlSyncReady = true;
     registerKeyboardShortcuts();
   });
+
+  $: if (urlSyncReady) {
+    const params = new URLSearchParams();
+    params.set("region", selectedRegion);
+    if (selectedCompany) params.set("company", selectedCompany);
+    if (selectedLine) params.set("line", selectedLine);
+    window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+  }
 
   // Reactive redraw whenever region, company, line, or render option changes
   $: if (viewerEl && regions.length > 0) {
