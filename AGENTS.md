@@ -17,14 +17,14 @@ This codebase provides two things:
 Here is an overview of the key files and their responsibilities:
 
 ### Core Library (`src/lib/`)
-* **[JapanTrainLines.svelte](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/JapanTrainLines.svelte)**: The main Svelte component. It renders a sidebar listing train companies/lines and binds an SVG rendering container. It handles click interactions, mounts keyboard listeners (ArrowRight to traverse lines), and orchestrates data rendering.
-* **[japan-train-lines.js](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/japan-train-lines.js)**: Handles loading the GeoJSON file (`loadTrainLines`) and coordinates drawing line/region views (`drawTrainLine`). Also contains hardcoded coordinates bounding-box filters for limiting features to the Tokyo metropolitan region.
-* **[train-lines.js](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/train-lines.js)**:
+* **JapanTrainLines.svelte**: The main Svelte component. It renders a sidebar listing train companies/lines and binds an SVG rendering container. It handles click interactions, mounts keyboard listeners (ArrowRight to traverse lines), and orchestrates data rendering.
+* **japan-train-lines.js**: Handles loading the GeoJSON file (`loadTrainLines`) and coordinates drawing line/region views (`drawTrainLine`). Also contains hardcoded coordinates bounding-box filters for limiting features to the Tokyo metropolitan region.
+* **train-lines.js**:
   * `lineNames(geojson)`: Groups features by company name and train line name.
   * `joinSegments(segments)`: **Crucial Algorithm.** The raw GIS GeoJSON contains many disjointed segment lines for a single railway line. This function loops through all segments and matches coordinate endpoints to stitch them into continuous paths. It handles reversals (reversing coordinate arrays) if segments are oriented differently.
-* **[train-line-svg.js](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/train-line-svg.js)**: Computes the bounding box of coordinates, maps latitude/longitude coordinates to SVG canvas space (reversing Y-axis since GIS Y increases upwards while SVG Y increases downwards), applies segment-level corrections, and outputs the `<svg>` path tags.
-* **[tokyo-train-lines.js](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/tokyo-train-lines.js)**: Standard lookup lists of Tokyo-centric train operating companies and their lines to filter nationwide data.
-* **[train-line-corrections.json](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/train-line-corrections.json)**: Configuration to correct GIS anomalies (e.g., adding overlapping sections of `東北線` and `東海道線` into the `山手線` view, and setting coordinate bounding filters).
+* **train-line-svg.js**: Computes the bounding box of coordinates, maps latitude/longitude coordinates to SVG canvas space (reversing Y-axis since GIS Y increases upwards while SVG Y increases downwards), applies segment-level corrections, and outputs the `<svg>` path tags.
+* **tokyo-train-lines-data.js**: Standard lookup lists of Tokyo-centric train operating companies and their lines to filter nationwide data.
+* **train-line-corrections.json]**: Configuration to correct GIS anomalies (e.g., adding overlapping sections of `東北線` and `東海道線` into the `山手線` view, and setting coordinate bounding filters).
 
 ### Routes & App Config (`src/`)
 * **[+page.svelte](file:///Users/liquidx/p/liquidx-japan-train-lines/src/routes/%2Bpage.svelte)**: Instantiates `<JapanTrainLines>` pointing to `/N02-19_RailroadSection.geojson`.

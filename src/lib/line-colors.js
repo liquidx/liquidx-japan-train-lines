@@ -1,4 +1,4 @@
-import { lineColorMap } from './line-colors-data.js';
+import { colorMap } from './line-colors-data.js';
 
 const colorForTheme = (color, mapTheme = "dark") => {
   if (!color) return null;

@@ -6,7 +6,7 @@ import trainLineCorrections from "./train-line-corrections.json";
 import {
   tokyoTrainLineNames,
   tokyoTrainCompanies,
-} from "./tokyo-train-lines.js";
+} from "./tokyo-train-lines-data.js";
 import { regions } from "./regions.js";
 
 let _trainLines = {};
