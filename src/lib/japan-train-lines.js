@@ -1,5 +1,5 @@
 import { pull, concat } from "lodash-es";
-
+import { prioritizedTrainCompanies } from './line-major-data.js'
 import { lineNames } from "./train-lines.js";
 import { svg_from_segments } from "./train-line-svg.js";
 import trainLineCorrections from "./train-line-corrections.json";
@@ -15,19 +15,6 @@ let _stationGeoJson = null;
 let _regionsStationGeoJson = {};
 let _japanOutlineGeoJson = null;
 
-
-
-let _prioritizedTrainCompanies = [
-  "東京地下鉄",
-  "東急電鉄",
-  "東京モノレール",
-  "東京都",
-  "東京臨海高速鉄道",
-  "東日本旅客鉄道",
-  "西武鉄道",
-  "京成電鉄",
-  "京王電鉄",
-];
 
 export const drawTrainLine = (
   regionName,
@@ -80,8 +67,8 @@ const getTrainCompanyNames = (train_lines) => {
   let companyNames = Object.keys(train_lines);
 
   // Force a few companies to be at the top.
-  companyNames = pull(companyNames, ..._prioritizedTrainCompanies);
-  companyNames = concat(_prioritizedTrainCompanies, companyNames);
+  companyNames = pull(companyNames, ...prioritizedTrainCompanies);
+  companyNames = concat(prioritizedTrainCompanies, companyNames);
 
   let lines = [];
   for (const company_name of companyNames) {

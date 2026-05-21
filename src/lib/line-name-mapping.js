@@ -71,7 +71,7 @@ export const lineNameMapping = {
   "わたらせ渓谷線": { en: "Watarase Keikoku Line" },
 
   // Kanji, A-order
-  "阿佐線": { en: "Asa Line" },
+  "阿佐線": { en: "Asa Line", ja: "ごめん・なはり線" },
   "阿佐東線": { en: "Asa East Line" },
   "阿武隈急行線": { en: "Abukuma Express Line" },
   "愛知環状鉄道線": { en: "Aichi Loop Railway Line" },
