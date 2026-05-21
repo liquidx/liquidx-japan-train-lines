@@ -218,6 +218,62 @@ describe("train-lines", () => {
       // Check that both stations are rendered with their respective line colors
       expect(svg).toContain('fill="#f30100"');
     });
+
+    it("can hide the base map outline", () => {
+      const railroadGeojson = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄"
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [139.1, 35.1],
+                [139.2, 35.2]
+              ]
+            }
+          }
+        ]
+      };
+      const japanOutlineGeoJson = {
+        geometries: [
+          {
+            type: "LineString",
+            coordinates: [
+              [139.0, 35.0],
+              [139.3, 35.0],
+              [139.3, 35.3]
+            ]
+          }
+        ]
+      };
+
+      const visibleSvg = svg_from_segments(
+        railroadGeojson,
+        null,
+        "tokyo",
+        "東京地下鉄",
+        "銀座線",
+        640,
+        null,
+        { japanOutlineGeoJson }
+      );
+      const hiddenSvg = svg_from_segments(
+        railroadGeojson,
+        null,
+        "tokyo",
+        "東京地下鉄",
+        "銀座線",
+        640,
+        null,
+        { japanOutlineGeoJson, showBaseMapOutline: false }
+      );
+
+      expect(visibleSvg).toContain('class="japan-outline-path"');
+      expect(hiddenSvg).not.toContain('class="japan-outline-path"');
+    });
   });
 
   describe("filterGeoJsonByBounds & getTokyoGeoJson", () => {

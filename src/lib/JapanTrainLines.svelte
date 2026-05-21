@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
-  import { Plus, Minus, RotateCcw } from "@lucide/svelte";
+  import { Eye, EyeOff, Minus, Palette, Plus, RotateCcw, SlidersHorizontal } from "@lucide/svelte";
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
@@ -14,6 +14,7 @@
   let selectedCompany = null;
   let selectedLine = null;
   let showLineColors = true;
+  let showBaseMapOutline = true;
 
   // Pan & Zoom State
   let zoom = 1;
@@ -93,7 +94,7 @@
     registerKeyboardShortcuts();
   });
 
-  // Reactive redraw whenever region, company, line, or color option changes
+  // Reactive redraw whenever region, company, line, or render option changes
   $: if (viewerEl && regions.length > 0) {
     drawTrainLine(
       selectedRegion,
@@ -101,7 +102,7 @@
       selectedLine,
       viewerEl,
       640,
-      { showLineColors },
+      { showLineColors, showBaseMapOutline },
     );
     applyMapTransform();
   }
@@ -256,20 +257,6 @@
     </div>
 
     <div class="flex items-center gap-4">
-      <!-- Mapped Colors Toggle Switch -->
-      <div class="flex items-center gap-2 bg-white/3 px-3.5 py-1.5 rounded-full border border-white/6">
-        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.5px]"
-          >{showLineColors ? "Colored Lines" : "Monomap"}</span
-        >
-        <button
-          class="w-[34px] h-[18px] rounded-full border-none relative cursor-pointer transition-colors duration-200 p-0 {showLineColors ? 'bg-[#a855f7]' : 'bg-slate-700'}"
-          on:click={() => (showLineColors = !showLineColors)}
-          aria-label="Toggle official line colors"
-        >
-          <span class="w-3 h-3 rounded-full bg-white absolute top-[3px] left-[3px] transition-transform duration-200 cubic-bezier(0.4, 0, 0.2, 1) {showLineColors ? 'translate-x-4' : 'translate-x-0'}"></span>
-        </button>
-      </div>
-
       {#if selectedCompany}
         <div class="flex items-center gap-2 bg-white/4 px-3.5 py-1.5 rounded-full border border-white/8 text-[13px]">
           <span class="font-medium text-sky-400">{selectedCompany}</span>
@@ -307,16 +294,65 @@
     ></div>
 
     <!-- HUD Overlay Controls -->
-    <div class="absolute top-5 right-5 flex flex-col gap-2 bg-slate-900/70 backdrop-blur-md p-1.5 rounded-xl border border-white/8 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-[5]">
-      <button on:click={zoomIn} title="Zoom In" aria-label="Zoom In" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
-        <Plus size={18} strokeWidth={2.5} />
-      </button>
-      <button on:click={zoomOut} title="Zoom Out" aria-label="Zoom Out" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
-        <Minus size={18} strokeWidth={2.5} />
-      </button>
-      <button on:click={handleReset} title="Reset View" aria-label="Reset View" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
-        <RotateCcw size={16} strokeWidth={2.5} />
-      </button>
+    <div class="hud-controls absolute top-5 right-5 flex items-start gap-3 z-[5]">
+      <div class="w-[232px] bg-slate-950/75 backdrop-blur-md rounded-xl border border-white/8 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div class="h-10 flex items-center gap-2 px-3.5 border-b border-white/8 bg-white/3">
+          <SlidersHorizontal size={15} strokeWidth={2.3} class="text-cyan-300" />
+          <h2 class="m-0 text-[11px] font-semibold uppercase tracking-[0.6px] text-slate-300">Map Appearance</h2>
+        </div>
+
+        <div class="p-2">
+          <button
+            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-white/5 hover:border-white/8"
+            on:click={() => (showLineColors = !showLineColors)}
+            aria-pressed={showLineColors}
+          >
+            <span class="flex items-center gap-2.5 min-w-0">
+              <Palette size={16} strokeWidth={2.2} class={showLineColors ? "text-purple-300" : "text-slate-500"} />
+              <span class="flex flex-col min-w-0 leading-tight">
+                <span class="text-[12px] font-semibold text-slate-200">Line colors</span>
+                <span class="text-[10px] text-slate-500 truncate">{showLineColors ? "Official colors where available" : "Single-color rendering"}</span>
+              </span>
+            </span>
+            <span class="w-[34px] h-[18px] rounded-full relative shrink-0 transition-colors duration-200 {showLineColors ? 'bg-purple-500' : 'bg-slate-700'}">
+              <span class="w-3 h-3 rounded-full bg-white absolute top-[3px] left-[3px] transition-transform duration-200 {showLineColors ? 'translate-x-4' : 'translate-x-0'}"></span>
+            </span>
+          </button>
+
+          <button
+            class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-white/5 hover:border-white/8"
+            on:click={() => (showBaseMapOutline = !showBaseMapOutline)}
+            aria-pressed={showBaseMapOutline}
+          >
+            <span class="flex items-center gap-2.5 min-w-0">
+              {#if showBaseMapOutline}
+                <Eye size={16} strokeWidth={2.2} class="text-cyan-300" />
+              {:else}
+                <EyeOff size={16} strokeWidth={2.2} class="text-slate-500" />
+              {/if}
+              <span class="flex flex-col min-w-0 leading-tight">
+                <span class="text-[12px] font-semibold text-slate-200">Base map outline</span>
+                <span class="text-[10px] text-slate-500 truncate">{showBaseMapOutline ? "Land outline visible" : "Land outline hidden"}</span>
+              </span>
+            </span>
+            <span class="w-[34px] h-[18px] rounded-full relative shrink-0 transition-colors duration-200 {showBaseMapOutline ? 'bg-cyan-500' : 'bg-slate-700'}">
+              <span class="w-3 h-3 rounded-full bg-white absolute top-[3px] left-[3px] transition-transform duration-200 {showBaseMapOutline ? 'translate-x-4' : 'translate-x-0'}"></span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 bg-slate-950/75 backdrop-blur-md p-1.5 rounded-xl border border-white/8 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)]">
+        <button on:click={zoomIn} title="Zoom In" aria-label="Zoom In" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+          <Plus size={18} strokeWidth={2.5} />
+        </button>
+        <button on:click={zoomOut} title="Zoom Out" aria-label="Zoom Out" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+          <Minus size={18} strokeWidth={2.5} />
+        </button>
+        <button on:click={handleReset} title="Reset View" aria-label="Reset View" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+          <RotateCcw size={16} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
 
     <!-- Keyboard Hint -->

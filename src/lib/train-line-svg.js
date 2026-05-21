@@ -258,7 +258,7 @@ export const svg_from_segments = (
   svg_string +=
     '  <g data-map-layer fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
 
-  if (options.japanOutlineGeoJson) {
+  if (options.japanOutlineGeoJson && options.showBaseMapOutline !== false) {
     const geometries = options.japanOutlineGeoJson.geometries || [];
     const segments = geometries.map((geom) => ({ geometry: geom }));
     const joined = joinSegments(segments);
