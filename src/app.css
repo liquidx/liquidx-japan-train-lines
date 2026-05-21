@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+#svg-content-wrapper svg {
+  pointer-events: auto;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  display: block;
+}
+
+#svg-content-wrapper g.segment path,
+#svg-content-wrapper path {
+  transition: stroke 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+  vector-effect: non-scaling-stroke;
+}
+
+#svg-content-wrapper g.segment path:hover {
+  filter: drop-shadow(0 0 4px rgba(255, 0, 0, 0.6));
+}
+
+#svg-content-wrapper .station-dot {
+  cursor: pointer;
+  transition: fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
+}
+
+#svg-content-wrapper .station-dot:hover {
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.7));
+}

@@ -14,7 +14,10 @@ export const lineNames = (geojson) => {
 
 // Merge segments into a continuous paths.
 export const joinSegments = (segments) => {
-  let remainingSegments = segments;
+  if (!segments || segments.length === 0) {
+    return [];
+  }
+  let remainingSegments = [...segments];
 
   let paths = [];
   let path = [];

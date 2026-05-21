@@ -32,25 +32,6 @@ const color_for_line = (company_name, line_name, options = {}) => {
   );
 };
 
-const lighten_color = (hex_color, amount = 0.65) => {
-  let color = hex_color.replace("#", "");
-  if (color.length !== 6) {
-    return hex_color;
-  }
-
-  let red = parseInt(color.slice(0, 2), 16);
-  let green = parseInt(color.slice(2, 4), 16);
-  let blue = parseInt(color.slice(4, 6), 16);
-
-  let mix = (value) => {
-    return Math.round(value + (255 - value) * amount)
-      .toString(16)
-      .padStart(2, "0");
-  };
-
-  return `${mix(red)}${mix(green)}${mix(blue)}`;
-};
-
 const features_for_line = (
   geojson,
   company_name_pattern,
@@ -89,7 +70,37 @@ const segments_for_line = (
     company_name_pattern,
     line_name_pattern
   );
-  const joinedSegments = joinSegments(segments);
+
+  // Group segments by company and line name to join segments of each line separately
+  let groups = {};
+  for (let segment of segments) {
+    let company = segment.properties ? segment.properties["運営会社"] : "";
+    let line = segment.properties ? segment.properties["路線名"] : "";
+    let key = `${company}::${line}`;
+    if (!groups[key]) {
+      groups[key] = {
+        company,
+        line,
+        segments: []
+      };
+    }
+    groups[key].segments.push(segment);
+  }
+
+  let joinedSegments = [];
+  for (let key in groups) {
+    let group = groups[key];
+    let joined = joinSegments(group.segments);
+    // Add properties back to the joined segments
+    for (let j of joined) {
+      j.properties = {
+        "運営会社": group.company,
+        "路線名": group.line
+      };
+    }
+    joinedSegments = joinedSegments.concat(joined);
+  }
+
   return joinedSegments;
 };
 
@@ -266,9 +277,8 @@ export const svg_from_segments = (
     let station_line = station.properties ? station.properties["路線名"] : line_name;
     let station_company = station.properties ? station.properties["運営会社"] : company_name;
     let station_color = color_for_line(station_company, station_line, options);
-    let station_fill_color = lighten_color(station_color);
     station_n += 1;
-    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="#${station_fill_color}" stroke="#${station_color}" stroke-width="2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
+    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="#${station_color}" stroke="#${station_color}" stroke-width="0.2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
     svg_string += station_svg;
   }
   svg_string += "</g>\n";

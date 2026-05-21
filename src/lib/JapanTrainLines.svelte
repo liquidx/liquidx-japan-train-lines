@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
+  import { Plus, Minus, RotateCcw } from "@lucide/svelte";
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
@@ -8,9 +9,9 @@
   let regions = [];
   let regionDataMap = {};
   let trainCompanyNames = [];
-  let selectedRegion = "tokyo";
-  let selectedCompany = "東京地下鉄";
-  let selectedLine = "2号線日比谷線";
+  let selectedRegion = "kanto";
+  let selectedCompany = null;
+  let selectedLine = null;
   let showLineColors = true;
 
   // Pan & Zoom State
@@ -18,14 +19,14 @@
   let panX = 0;
   let panY = 0;
   let isDragging = false;
-  
+
   let startX = 0;
   let startY = 0;
   let initPanX = 0;
   let initPanY = 0;
   const lineStrokeWidth = 2;
-  const minStationRadius = lineStrokeWidth * 0.75;
-  const maxStationRadius = lineStrokeWidth * 3;
+  const minStationRadius = lineStrokeWidth * 0.1;
+  const maxStationRadius = lineStrokeWidth * 1.5;
 
   const stationRadiusForZoom = (currentZoom) => {
     const zoomStep = Math.log2(Math.max(currentZoom, 0.25));
@@ -60,7 +61,10 @@
     }
 
     const rect = svg.getBoundingClientRect();
-    return clientPointToSvgPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return clientPointToSvgPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
   };
 
   const applyMapTransform = () => {
@@ -69,7 +73,7 @@
 
     mapLayer.setAttribute(
       "transform",
-      `translate(${panX} ${panY}) scale(${zoom})`
+      `translate(${panX} ${panY}) scale(${zoom})`,
     );
 
     const screenCtm = mapLayer.getScreenCTM();
@@ -90,7 +94,14 @@
 
   // Reactive redraw whenever region, company, line, or color option changes
   $: if (viewerEl && regions.length > 0) {
-    drawTrainLine(selectedRegion, selectedCompany, selectedLine, viewerEl, 640, { showLineColors });
+    drawTrainLine(
+      selectedRegion,
+      selectedCompany,
+      selectedLine,
+      viewerEl,
+      640,
+      { showLineColors },
+    );
     applyMapTransform();
   }
 
@@ -129,14 +140,14 @@
   const handleWheel = (e) => {
     e.preventDefault();
     const zoomFactor = 1.15;
-    
+
     const factor = e.deltaY < 0 ? zoomFactor : 1 / zoomFactor;
     zoomToPoint(clientPointToSvgPoint(e.clientX, e.clientY), factor);
   };
 
   const handleMouseDown = (e) => {
     if (e.button !== 0) return; // Only left click
-    if (e.target.closest('.hud-controls')) return;
+    if (e.target.closest(".hud-controls")) return;
 
     isDragging = true;
     const point = clientPointToSvgPoint(e.clientX, e.clientY);
@@ -211,7 +222,7 @@
 
   const getNextLine = () => {
     let company = trainCompanyNames.find(
-      (company) => company.company === selectedCompany
+      (company) => company.company === selectedCompany,
     );
     if (!company) return selectedLine;
     let lineIndex = company.lines.indexOf(selectedLine);
@@ -224,7 +235,7 @@
 
   const getNextCompany = () => {
     let companyIndex = trainCompanyNames.findIndex(
-      (company) => company.company === selectedCompany
+      (company) => company.company === selectedCompany,
     );
     if (companyIndex === -1 || companyIndex === trainCompanyNames.length - 1) {
       return trainCompanyNames[0]?.company || selectedCompany;
@@ -234,41 +245,42 @@
   };
 </script>
 
-<div id="app-container">
+<div id="app-container" class="flex flex-col h-screen w-screen bg-[#090d16] overflow-hidden">
   <!-- Title / Header Overlay -->
-  <header class="app-header">
-    <div class="logo">
-      <span class="icon">🚇</span>
-      <h1>Japan Train Line Maps</h1>
-      <span class="subtitle">鉄道路線図</span>
+  <header class="h-[60px] bg-slate-900/80 backdrop-blur-md border-b border-white/8 flex justify-between items-center px-6 z-10">
+    <div class="flex items-center gap-2.5">
+      <span class="text-[20px]">🚇</span>
+      <h1 class="font-['Outfit'] text-[18px] font-semibold m-0 text-white tracking-[-0.5px]">Japan Train Line Maps</h1>
+      <span class="text-[12px] text-slate-500 ml-1.5 pl-3 border-l border-white/15">鉄道路線図</span>
     </div>
-    
-    <div class="header-right">
+
+    <div class="flex items-center gap-4">
       <!-- Mapped Colors Toggle Switch -->
-      <div class="color-toggle-container">
-        <span class="toggle-label">{showLineColors ? "Colored Lines" : "Monomap"}</span>
-        <button 
-          class="toggle-switch" 
-          class:checked={showLineColors} 
-          on:click={() => showLineColors = !showLineColors}
+      <div class="flex items-center gap-2 bg-white/3 px-3.5 py-1.5 rounded-full border border-white/6">
+        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.5px]"
+          >{showLineColors ? "Colored Lines" : "Monomap"}</span
+        >
+        <button
+          class="w-[34px] h-[18px] rounded-full border-none relative cursor-pointer transition-colors duration-200 p-0 {showLineColors ? 'bg-[#a855f7]' : 'bg-slate-700'}"
+          on:click={() => (showLineColors = !showLineColors)}
           aria-label="Toggle official line colors"
         >
-          <span class="toggle-handle"></span>
+          <span class="w-3 h-3 rounded-full bg-white absolute top-[3px] left-[3px] transition-transform duration-200 cubic-bezier(0.4, 0, 0.2, 1) {showLineColors ? 'translate-x-4' : 'translate-x-0'}"></span>
         </button>
       </div>
 
       {#if selectedCompany}
-        <div class="status-badge">
-          <span class="company-badge">{selectedCompany}</span>
+        <div class="flex items-center gap-2 bg-white/4 px-3.5 py-1.5 rounded-full border border-white/8 text-[13px]">
+          <span class="font-medium text-sky-400">{selectedCompany}</span>
           {#if selectedLine}
-            <span class="arrow">→</span>
-            <span class="line-badge">{selectedLine}</span>
+            <span class="text-slate-600">→</span>
+            <span class="text-slate-200">{selectedLine}</span>
           {/if}
         </div>
       {:else}
-        <div class="status-badge">
-          <span class="company-badge region">
-            {regions.find(r => r.id === selectedRegion)?.name || "All Japan"} Network
+        <div class="flex items-center gap-2 bg-white/4 px-3.5 py-1.5 rounded-full border border-white/8 text-[13px]">
+          <span class="font-medium text-purple-400">
+            {regions.find((r) => r.id === selectedRegion)?.name || "All Japan"} Network
           </span>
         </div>
       {/if}
@@ -277,93 +289,97 @@
 
   <!-- Interactive Map Viewport -->
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-  <div 
-    id="svg-viewer" 
+  <div
+    id="svg-viewer"
     role="application"
     aria-label="Interactive train map viewer"
     on:mousedown={handleMouseDown}
     on:wheel={handleWheel}
+    class="flex-1 relative bg-[#0b0f19] overflow-hidden select-none touch-none bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] bg-center border-b border-white/8"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
     <div
       id="svg-content-wrapper"
       bind:this={viewerEl}
+      class="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none"
       style="--zoom: {zoom};"
     ></div>
 
     <!-- HUD Overlay Controls -->
-    <div class="hud-controls">
-      <button on:click={zoomIn} title="Zoom In" aria-label="Zoom In">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    <div class="absolute top-5 right-5 flex flex-col gap-2 bg-slate-900/70 backdrop-blur-md p-1.5 rounded-xl border border-white/8 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-[5]">
+      <button on:click={zoomIn} title="Zoom In" aria-label="Zoom In" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+        <Plus size={18} strokeWidth={2.5} />
       </button>
-      <button on:click={zoomOut} title="Zoom Out" aria-label="Zoom Out">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <button on:click={zoomOut} title="Zoom Out" aria-label="Zoom Out" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+        <Minus size={18} strokeWidth={2.5} />
       </button>
-      <button on:click={handleReset} title="Reset View" aria-label="Reset View">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      <button on:click={handleReset} title="Reset View" aria-label="Reset View" class="w-9 h-9 rounded-lg border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-sky-400 active:bg-sky-500/15 active:text-sky-500">
+        <RotateCcw size={16} strokeWidth={2.5} />
       </button>
     </div>
 
     <!-- Keyboard Hint -->
-    <div class="keyboard-hint">
-      Press <kbd>➔</kbd> to cycle lines
+    <div class="absolute bottom-5 left-5 text-[11px] text-slate-600 bg-slate-900/50 px-3 py-1.5 rounded border border-white/4 pointer-events-none">
+      Press <kbd class="bg-white/8 border border-white/15 rounded px-1 py-[1px] font-inherit text-slate-400">➔</kbd> to cycle lines
     </div>
   </div>
 
   <!-- Controls Panel -->
-  <section id="controls-panel">
+  <section id="controls-panel" class="h-[38vh] flex flex-col bg-[#0f172a] z-[5]">
     <!-- Region Selector Tabs -->
-    <div class="region-selector-bar">
+    <div class="flex bg-slate-900/90 border-b border-white/8 px-4 gap-1.5 h-12 items-center overflow-x-auto scrollbar-thin">
       {#each regions as r}
-        <button 
-          class="region-tab" 
-          class:active={selectedRegion === r.id}
+        <button
+          class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-transparent border border-transparent text-slate-500 cursor-pointer whitespace-nowrap transition-all duration-200 hover:bg-white/3 hover:text-slate-400 {selectedRegion === r.id ? 'bg-purple-500/8 border-purple-500/20 text-purple-400' : ''}"
           on:click={() => selectRegion(r.id)}
         >
-          <span class="region-dot"></span>
-          <div class="region-labels">
-            <span class="region-name-ja">{r.nameJa}</span>
-            <span class="region-name-en">{r.name}</span>
+          <span class="w-1.5 h-1.5 rounded-full transition-all duration-200 border bg-transparent {selectedRegion === r.id ? 'border-purple-400 bg-purple-400 shadow-[0_0_6px_#c084fc]' : 'border-purple-500/40'}"></span>
+          <div class="flex flex-col items-start leading-[1.1]">
+            <span class="text-[11px] font-semibold">{r.nameJa}</span>
+            <span class="text-[9px] opacity-60 mt-[1px]">{r.name}</span>
           </div>
         </button>
       {/each}
     </div>
 
-    <div class="panel-body">
+    <div class="flex flex-1 overflow-hidden">
       <!-- Left Column: Operating Companies -->
-      <div class="nav-column company-column">
-        <div class="column-header">
-          <h2>Operating Companies</h2>
-          <span class="count-indicator">{trainCompanyNames.length} total</span>
+      <div class="flex flex-col h-full w-[320px] border-r border-white/8 bg-slate-900/40">
+        <div class="h-12 flex justify-between items-center px-5 border-b border-white/6 bg-slate-900/50">
+          <h2 class="font-['Outfit'] text-[14px] font-semibold m-0 text-slate-400 uppercase tracking-[0.5px]">Operating Companies</h2>
+          <span class="text-[11px] text-slate-600 bg-white/4 px-2 py-0.5 rounded-full">{trainCompanyNames.length} total</span>
         </div>
-        <div class="scroll-area">
-          <button 
-            class="company-item region-quick-select" 
-            class:active={selectedCompany === null && selectedLine === null}
+        <div class="flex-1 overflow-y-auto p-3 scrollbar-thin">
+          <button
+            class="w-full border text-slate-400 cursor-pointer text-left transition-all duration-200 p-[10px_14px] rounded-lg mb-1.5 hover:text-slate-200 border-dashed border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/4 {selectedCompany === null && selectedLine === null ? 'bg-purple-500/8 border-purple-500/30 text-purple-400' : 'bg-purple-500/2'}"
             on:click={selectFullRegionMap}
           >
-            <div class="item-content">
-              <span class="badge-icon">🌐</span>
-              <div class="text-group">
-                <span class="primary-text">
-                  {regions.find(r => r.id === selectedRegion)?.nameJa || "全国"} Map
+            <div class="flex items-center gap-3">
+              <span class="text-[16px] opacity-80">🌐</span>
+              <div class="flex flex-col">
+                <span class="text-[13px] font-medium">
+                  {regions.find((r) => r.id === selectedRegion)?.nameJa ||
+                    "全国"} Map
                 </span>
-                <span class="secondary-text">Show all regional lines overlay</span>
+                <span class="text-[10px] mt-[1px] transition-colors {selectedCompany === null && selectedLine === null ? 'text-purple-400/60' : 'text-slate-600'}"
+                  >Show all regional lines overlay</span
+                >
               </div>
             </div>
           </button>
 
           {#each trainCompanyNames as company}
-            <button 
-              class="company-item" 
-              class:active={selectedCompany === company.company}
+            <button
+              class="w-full border text-slate-400 cursor-pointer text-left transition-all duration-200 p-[10px_14px] rounded-lg mb-1.5 hover:bg-white/3 hover:text-slate-200 {selectedCompany === company.company ? 'bg-sky-500/8 border-sky-500/20 text-sky-400' : 'border-transparent bg-transparent'}"
               on:click={() => selectCompany(company.company)}
             >
-              <div class="item-content">
-                <span class="badge-icon">🏢</span>
-                <div class="text-group">
-                  <span class="primary-text">{company.company}</span>
-                  <span class="secondary-text">{company.lines.length} lines</span>
+              <div class="flex items-center gap-3">
+                <span class="text-[16px] opacity-80">🏢</span>
+                <div class="flex flex-col">
+                  <span class="text-[13px] font-medium">{company.company}</span>
+                  <span class="text-[10px] mt-[1px] transition-colors {selectedCompany === company.company ? 'text-sky-400/60' : 'text-slate-600'}"
+                    >{company.lines.length} lines</span
+                  >
                 </div>
               </div>
             </button>
@@ -372,9 +388,9 @@
       </div>
 
       <!-- Right Column: Train Lines Grid -->
-      <div class="nav-column line-column">
-        <div class="column-header">
-          <h2>
+      <div class="flex flex-col h-full flex-1 bg-slate-900/20">
+        <div class="h-12 flex justify-between items-center px-5 border-b border-white/6 bg-slate-900/50">
+          <h2 class="font-['Outfit'] text-[14px] font-semibold m-0 text-slate-400 uppercase tracking-[0.5px]">
             {#if selectedCompany}
               {selectedCompany} Lines
             {:else}
@@ -382,34 +398,43 @@
             {/if}
           </h2>
           {#if selectedCompany}
-            <span class="count-indicator">
-              {(trainCompanyNames.find(c => c.company === selectedCompany)?.lines || []).length} lines
+            <span class="text-[11px] text-slate-600 bg-white/4 px-2 py-0.5 rounded-full">
+              {(
+                trainCompanyNames.find((c) => c.company === selectedCompany)
+                  ?.lines || []
+              ).length} lines
             </span>
           {/if}
         </div>
-        
-        <div class="scroll-area grid-view">
+
+        <div class="flex-1 overflow-y-auto p-3 scrollbar-thin">
           {#if selectedCompany}
-            <div class="lines-grid">
-              {#each (trainCompanyNames.find(c => c.company === selectedCompany)?.lines || []) as line}
-                <button 
-                  class="line-item"
-                  class:active={selectedLine === line}
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 w-full">
+              {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line}
+                <button
+                  class="group w-full border bg-white/2 text-slate-400 cursor-pointer text-left transition-all duration-200 flex items-center gap-2.5 p-[12px_16px] rounded-lg border-white/4 hover:bg-white/5 hover:border-white/8 hover:text-slate-100 {selectedLine === line ? 'bg-cyan-500/8 border-cyan-500/20 text-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.05)]' : ''}"
                   on:click={() => selectLine(selectedCompany, line)}
                 >
-                  <span class="line-dot" style="background-color: {selectedLine === line ? '#06b6d4' : '#475569'}"></span>
-                  <span class="line-name">{line}</span>
+                  <span
+                    class="w-2 h-2 rounded-full shrink-0 transition-all duration-200 group-hover:scale-125 group-hover:!bg-sky-400"
+                    style="background-color: {selectedLine === line
+                      ? '#06b6d4'
+                      : '#475569'}"
+                  ></span>
+                  <span class="text-[13px] font-medium">{line}</span>
                 </button>
               {/each}
             </div>
           {:else}
-            <div class="empty-state">
-              <div class="empty-state">
-                <div class="empty-content">
-                  <span class="empty-icon">🗺️</span>
-                  <h3>No Company Selected</h3>
-                  <p>Choose a railway operating company from the left panel to browse and visualize individual train lines, or view the complete metropolitan map.</p>
-                </div>
+            <div class="flex items-center justify-center h-full min-h-[200px] text-center text-slate-600">
+              <div class="max-w-[380px]">
+                <span class="text-[32px] block mb-3 opacity-50">🗺️</span>
+                <h3 class="font-['Outfit'] text-slate-500 text-[16px] font-semibold m-[0_0_6px_0]">No Company Selected</h3>
+                <p class="text-[12px] leading-relaxed m-0">
+                  Choose a railway operating company from the left panel to
+                  browse and visualize individual train lines, or view the
+                  complete metropolitan map.
+                </p>
               </div>
             </div>
           {/if}
@@ -418,595 +443,3 @@
     </div>
   </section>
 </div>
-
-<style>
-  #app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100vw;
-    background-color: #090d16;
-    overflow: hidden;
-  }
-
-  /* Header Styling */
-  .app-header {
-    height: 60px;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 24px;
-    z-index: 10;
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logo .icon {
-    font-size: 20px;
-  }
-
-  .logo h1 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: #ffffff;
-    letter-spacing: -0.5px;
-  }
-
-  .logo .subtitle {
-    font-size: 12px;
-    color: #64748b;
-    margin-left: 6px;
-    padding-left: 12px;
-    border-left: 1px solid rgba(255, 255, 255, 0.15);
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .color-toggle-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 6px 14px;
-    border-radius: 99px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .toggle-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .toggle-switch {
-    width: 34px;
-    height: 18px;
-    border-radius: 99px;
-    background: #334155;
-    border: none;
-    position: relative;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    padding: 0;
-  }
-
-  .toggle-switch.checked {
-    background: #a855f7;
-  }
-
-  .toggle-handle {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #ffffff;
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .toggle-switch.checked .toggle-handle {
-    transform: translateX(16px);
-  }
-
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 6px 14px;
-    border-radius: 99px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 13px;
-  }
-
-  .company-badge {
-    font-weight: 500;
-    color: #38bdf8;
-  }
-  .company-badge.region {
-    color: #a855f7;
-  }
-
-  .arrow {
-    color: #475569;
-  }
-
-  .line-badge {
-    color: #e2e8f0;
-  }
-
-  /* SVG Viewer */
-  #svg-viewer {
-    flex: 1 1 0%;
-    position: relative;
-    background-color: #0b0f19;
-    overflow: hidden;
-    user-select: none;
-    touch-action: none;
-    /* Grid blueprint style background */
-    background-image: 
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 30px 30px;
-    background-position: center center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  #svg-content-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none; /* Let events fall through to #svg-viewer */
-  }
-
-  /* Dynamic event styling inside SVG */
-  :global(#svg-content-wrapper svg) {
-    pointer-events: auto; /* Re-enable pointer events for the SVG paths */
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    display: block;
-  }
-
-  :global(#svg-content-wrapper g.segment path),
-  :global(#svg-content-wrapper path) {
-    transition: stroke 0.15s ease, filter 0.15s ease;
-    cursor: pointer;
-    vector-effect: non-scaling-stroke;
-  }
-
-  :global(#svg-content-wrapper g.segment path:hover) {
-    filter: drop-shadow(0 0 4px rgba(255, 0, 0, 0.6));
-  }
-
-  :global(#svg-content-wrapper .station-dot) {
-    cursor: pointer;
-    transition: fill 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
-  }
-
-  :global(#svg-content-wrapper .station-dot:hover) {
-    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.7));
-  }
-
-  /* HUD Controls */
-  .hud-controls {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: rgba(15, 23, 42, 0.7);
-    backdrop-filter: blur(12px);
-    padding: 6px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    z-index: 5;
-  }
-
-  .hud-controls button {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: #94a3b8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .hud-controls button:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #38bdf8;
-  }
-
-  .hud-controls button:active {
-    background: rgba(6, 182, 212, 0.15);
-    color: #06b6d4;
-  }
-
-  /* Keyboard Hint */
-  .keyboard-hint {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    font-size: 11px;
-    color: #475569;
-    background: rgba(15, 23, 42, 0.5);
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    pointer-events: none;
-  }
-
-  .keyboard-hint kbd {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
-    padding: 1px 4px;
-    font-family: inherit;
-    color: #94a3b8;
-  }
-
-  /* Controls Panel (Bottom split) */
-  #controls-panel {
-    height: 38vh;
-    display: flex;
-    flex-direction: column;
-    background: #0f172a;
-    z-index: 5;
-  }
-
-  /* Region Selector Bar */
-  .region-selector-bar {
-    display: flex;
-    background: rgba(15, 23, 42, 0.9);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0 16px;
-    gap: 6px;
-    height: 48px;
-    align-items: center;
-    overflow-x: auto;
-  }
-
-  .region-selector-bar::-webkit-scrollbar {
-    height: 3px;
-  }
-
-  .region-selector-bar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 99px;
-  }
-
-  .region-tab {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #64748b;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-  }
-
-  .region-tab:hover {
-    background: rgba(255, 255, 255, 0.03);
-    color: #94a3b8;
-  }
-
-  .region-tab.active {
-    background: rgba(168, 85, 247, 0.08);
-    border-color: rgba(168, 85, 247, 0.2);
-    color: #c084fc;
-  }
-
-  .region-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-    border: 1px solid rgba(168, 85, 247, 0.4);
-    background-color: transparent;
-  }
-
-  .region-tab.active .region-dot {
-    border-color: #c084fc;
-    background-color: #c084fc;
-    box-shadow: 0 0 6px #c084fc;
-  }
-
-  .region-labels {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    line-height: 1.1;
-  }
-
-  .region-name-ja {
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  .region-name-en {
-    font-size: 9px;
-    opacity: 0.6;
-    margin-top: 1px;
-  }
-
-  .panel-body {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* Navigation Columns */
-  .nav-column {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-
-  .company-column {
-    width: 320px;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(15, 23, 42, 0.4);
-  }
-
-  .line-column {
-    flex: 1;
-    background: rgba(15, 23, 42, 0.2);
-  }
-
-  .column-header {
-    height: 48px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(15, 23, 42, 0.5);
-  }
-
-  .column-header h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .count-indicator {
-    font-size: 11px;
-    color: #475569;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 2px 8px;
-    border-radius: 99px;
-  }
-
-  /* Scrollable Areas */
-  .scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-  }
-
-  /* Custom Scrollbar Styling */
-  .scroll-area::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .scroll-area::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scroll-area::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 99px;
-  }
-
-  .scroll-area::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
-  /* Nav Buttons (General) */
-  .company-item, .line-item {
-    width: 100%;
-    border: 1px solid transparent;
-    background: transparent;
-    color: #94a3b8;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.2s ease;
-  }
-
-  /* Company Items */
-  .company-item {
-    padding: 10px 14px;
-    border-radius: 8px;
-    margin-bottom: 6px;
-  }
-
-  .company-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-    color: #e2e8f0;
-  }
-
-  .company-item.active {
-    background: rgba(56, 189, 248, 0.08);
-    border-color: rgba(56, 189, 248, 0.2);
-    color: #38bdf8;
-  }
-
-  .region-quick-select {
-    border: 1px dashed rgba(168, 85, 247, 0.2);
-    background: rgba(168, 85, 247, 0.02);
-  }
-
-  .region-quick-select:hover {
-    border-color: rgba(168, 85, 247, 0.4);
-    background: rgba(168, 85, 247, 0.04);
-  }
-
-  .region-quick-select.active {
-    background: rgba(168, 85, 247, 0.08);
-    border-color: rgba(168, 85, 247, 0.3);
-    color: #c084fc;
-  }
-
-  .item-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .badge-icon {
-    font-size: 16px;
-    opacity: 0.8;
-  }
-
-  .text-group {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .primary-text {
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .secondary-text {
-    font-size: 10px;
-    color: #475569;
-    margin-top: 1px;
-  }
-
-  .company-item.active .secondary-text {
-    color: rgba(56, 189, 248, 0.6);
-  }
-
-  .region-quick-select.active .secondary-text {
-    color: rgba(168, 85, 247, 0.6);
-  }
-
-  /* Grid View for Lines */
-  .grid-view {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .lines-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
-    width: 100%;
-  }
-
-  /* Line Items */
-  .line-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-  }
-
-  .line-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
-    color: #f1f5f9;
-  }
-
-  .line-item.active {
-    background: rgba(6, 182, 212, 0.08);
-    border-color: rgba(6, 182, 212, 0.2);
-    color: #06b6d4;
-    box-shadow: 0 0 10px rgba(6, 182, 212, 0.05);
-  }
-
-  .line-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    transition: transform 0.2s ease, background-color 0.2s ease;
-  }
-
-  .line-item:hover .line-dot {
-    transform: scale(1.3);
-    background-color: #38bdf8 !important;
-  }
-
-  .line-name {
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  /* Empty State */
-  .empty-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 200px;
-    text-align: center;
-    color: #475569;
-  }
-
-  .empty-content {
-    max-width: 380px;
-  }
-
-  .empty-icon {
-    font-size: 32px;
-    display: block;
-    margin-bottom: 12px;
-    opacity: 0.5;
-  }
-
-  .empty-content h3 {
-    font-family: 'Outfit', sans-serif;
-    color: #64748b;
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 6px 0;
-  }
-
-  .empty-content p {
-    font-size: 12px;
-    line-height: 1.5;
-    margin: 0;
-  }
-</style>
