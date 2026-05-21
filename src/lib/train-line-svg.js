@@ -334,7 +334,7 @@ export const svg_from_segments = (
     let station_company = station.properties ? station.properties["運営会社"] : company_name;
     let station_color = color_for_line(station_company, station_line, options);
     station_n += 1;
-    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="${svg_paint(station_color)}" stroke="${svg_paint(station_color)}" stroke-width="0.2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
+    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="${svg_paint(station_color)}" stroke="${svg_paint(station_color)}" stroke-width="0.2" vector-effect="non-scaling-stroke" pointer-events="all" data-station-name="${station_name}" data-line-name="${escape_xml(station_line)}" data-company-name="${escape_xml(station_company)}"></circle>\n`;
     svg_string += station_svg;
   }
   svg_string += "</g>\n";

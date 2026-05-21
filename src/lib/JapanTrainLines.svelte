@@ -18,6 +18,8 @@
   export let stationGeoJsonUrl = null;
   export let japanOutlineGeoJsonUrl = null;
   let viewerEl;
+  let svgViewerEl;
+  let hoveredStation = null;
   let regions = [];
   let regionDataMap = {};
   let trainCompanyNames = [];
@@ -175,10 +177,28 @@
     zoomToPoint(clientPointToSvgPoint(e.clientX, e.clientY), factor);
   };
 
+  const handleStationMouseOver = (e) => {
+    if (!e.target.classList.contains("station-dot")) return;
+    const containerRect = svgViewerEl.getBoundingClientRect();
+    hoveredStation = {
+      name: e.target.getAttribute("data-station-name"),
+      lineName: e.target.getAttribute("data-line-name"),
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+    };
+  };
+
+  const handleStationMouseOut = (e) => {
+    if (e.target.classList.contains("station-dot")) {
+      hoveredStation = null;
+    }
+  };
+
   const handleMouseDown = (e) => {
     if (e.button !== 0) return; // Only left click
     if (e.target.closest(".hud-controls")) return;
 
+    hoveredStation = null;
     isDragging = true;
     const point = clientPointToSvgPoint(e.clientX, e.clientY);
     startX = point.x;
@@ -322,8 +342,11 @@
     id="svg-viewer"
     role="application"
     aria-label="Interactive train map viewer"
+    bind:this={svgViewerEl}
     on:mousedown={handleMouseDown}
     on:wheel={handleWheel}
+    on:mouseover={handleStationMouseOver}
+    on:mouseout={handleStationMouseOut}
     class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-border transition-colors duration-200"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
@@ -495,6 +518,17 @@
         </button>
       </div>
     </div>
+
+    <!-- Station Tooltip -->
+    {#if hoveredStation}
+      <div
+        class="absolute z-20 pointer-events-none bg-panel-background border border-border rounded-lg px-2.5 py-1.5 shadow-[var(--shadow-panel)] text-sm font-medium text-primary whitespace-nowrap"
+        style="left: {hoveredStation.x}px; top: {hoveredStation.y}px; transform: translate(-50%, calc(-100% - 10px));"
+      >
+        {hoveredStation.name}
+        <span class="block text-[10px] font-normal text-muted mt-0.5">{hoveredStation.lineName}</span>
+      </div>
+    {/if}
 
     <!-- Keyboard Hint -->
     <div
