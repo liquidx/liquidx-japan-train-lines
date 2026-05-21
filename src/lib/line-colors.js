@@ -31,8 +31,8 @@ const colorMap = {
   },
   // Tokyo Metro (東京地下鉄)
   "東京地下鉄": {
-    "3号線銀座線": "ff9500",
-    "銀座線": "ff9500",
+    "3号線銀座線": { light: "ff9500", dark: "ffb144" },
+    "銀座線": { light: "ff9500", dark: "ffb144" },
     "4号線丸ノ内線": "f30100",
     "丸ノ内線": "f30100",
     "4号線丸ノ内線分岐線": "f30100",
@@ -192,7 +192,21 @@ const colorMap = {
   }
 };
 
-export const getLineColor = (companyName, lineName) => {
+const colorForTheme = (color, mapTheme = "dark") => {
+  if (!color) return null;
+
+  if (typeof color === "string") {
+    return color;
+  }
+
+  if (mapTheme === "light") {
+    return color.light || color.dark || null;
+  }
+
+  return color.dark || color.light || null;
+};
+
+const findLineColorDefinition = (companyName, lineName) => {
   if (!companyName || !lineName) return null;
 
   // Try exact match
@@ -222,4 +236,8 @@ export const getLineColor = (companyName, lineName) => {
   }
 
   return null;
+};
+
+export const getLineColor = (companyName, lineName, mapTheme = "dark") => {
+  return colorForTheme(findLineColorDefinition(companyName, lineName), mapTheme);
 };

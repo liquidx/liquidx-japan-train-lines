@@ -35,7 +35,7 @@ const color_for_line = (company_name, line_name, options = {}) => {
   }
 
   const lineColor =
-    getLineColor(company_name, line_name) ||
+    getLineColor(company_name, line_name, options.mapTheme) ||
     fallback_color_for_line(company_name, line_name);
 
   if (options.mapTheme === "light" && lineColor.toLowerCase() === "ffffff") {

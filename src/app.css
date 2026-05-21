@@ -86,10 +86,12 @@
   display: block;
 }
 
-#svg-content-wrapper g.segment path,
 #svg-content-wrapper path {
   transition: stroke 0.15s ease, filter 0.15s ease;
   cursor: pointer;
+}
+
+#svg-content-wrapper .japan-outline-path {
   vector-effect: non-scaling-stroke;
 }
 

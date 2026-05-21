@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { joinSegments, lineNames } from "../src/lib/train-lines.js";
 import { svg_from_segments } from "../src/lib/train-line-svg.js";
 import { filterGeoJsonByBounds, getTokyoGeoJson } from "../src/lib/japan-train-lines.js";
+import { getLineColor } from "../src/lib/line-colors.js";
 import fs from "fs";
 
 describe("train-lines", () => {
@@ -69,24 +70,25 @@ describe("train-lines", () => {
   });
 
   describe("svg_from_segments", () => {
-    it("renders station dots only for the selected line", () => {
-      const railroadGeojson = {
-        features: [
-          {
-            properties: {
-              "路線名": "銀座線",
-              "運営会社": "東京地下鉄"
-            },
-            geometry: {
-              type: "LineString",
-              coordinates: [
-                [139.1, 35.1],
-                [139.2, 35.2]
-              ]
-            }
+    const ginzaLineGeojson = {
+      features: [
+        {
+          properties: {
+            "路線名": "銀座線",
+            "運営会社": "東京地下鉄"
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [139.1, 35.1],
+              [139.2, 35.2]
+            ]
           }
-        ]
-      };
+        }
+      ]
+    };
+
+    it("renders station dots only for the selected line", () => {
       const stationGeojson = {
         features: [
           {
@@ -121,7 +123,7 @@ describe("train-lines", () => {
       };
 
       const svg = svg_from_segments(
-        railroadGeojson,
+        ginzaLineGeojson,
         stationGeojson,
         "tokyo",
         "東京地下鉄",
@@ -130,10 +132,40 @@ describe("train-lines", () => {
       );
 
       expect(svg).toContain('class="station-dot"');
-      expect(svg).toContain('fill="#ff9500"');
-      expect(svg).toContain('stroke="#ff9500"');
+      expect(svg).toContain('class="train-line-path"');
+      expect(svg).not.toContain('vector-effect="non-scaling-stroke" d="M0,640 L640,0 "');
+      expect(svg).toContain('fill="#ffb144"');
+      expect(svg).toContain('stroke="#ffb144"');
       expect(svg).toContain("渋谷");
       expect(svg).not.toContain("新宿");
+    });
+
+    it("uses the selected map theme when resolving line colors", () => {
+      const darkSvg = svg_from_segments(
+        ginzaLineGeojson,
+        null,
+        "tokyo",
+        "東京地下鉄",
+        "銀座線",
+        640,
+        null,
+        { mapTheme: "dark" }
+      );
+      const lightSvg = svg_from_segments(
+        ginzaLineGeojson,
+        null,
+        "tokyo",
+        "東京地下鉄",
+        "銀座線",
+        640,
+        null,
+        { mapTheme: "light" }
+      );
+
+      expect(getLineColor("東京地下鉄", "銀座線", "dark")).toBe("ffb144");
+      expect(getLineColor("東京地下鉄", "銀座線", "light")).toBe("ff9500");
+      expect(darkSvg).toContain('stroke="#ffb144"');
+      expect(lightSvg).toContain('stroke="#ff9500"');
     });
 
     it("renders multiple lines with their correct colors when line_name is null", () => {
@@ -209,12 +241,12 @@ describe("train-lines", () => {
         640
       );
 
-      // Check that Ginza line path has its color (#ff9500)
-      expect(svg).toContain('stroke="#ff9500"');
+      // Check that Ginza line path has its dark theme color (#ffb144)
+      expect(svg).toContain('stroke="#ffb144"');
       // Check that Marunouchi line path has its color (#f30100)
       expect(svg).toContain('stroke="#f30100"');
       // Check that both stations are rendered with their respective line colors
-      expect(svg).toContain('fill="#ff9500"');
+      expect(svg).toContain('fill="#ffb144"');
       // Check that both stations are rendered with their respective line colors
       expect(svg).toContain('fill="#f30100"');
     });
