@@ -5,7 +5,6 @@
   export let line;
   export let company;
   export let selected = false;
-  export let compact = false;
 
   const dotColor = (c, l) => {
     const hex = getLineColor(c, l);
@@ -13,44 +12,22 @@
   };
 </script>
 
-{#if compact}
-  <button
-    class="group w-full border bg-[var(--color-surface-soft)] text-muted cursor-pointer text-left transition-all duration-200 flex items-center gap-2 p-[8px_10px] rounded-lg border-border hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)] {selected
-      ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_8px_var(--color-accent-secondary-soft)]'
-      : ''}"
-    on:click
-  >
-    <span
-      class="w-1.5 h-1.5 rounded-full shrink-0"
-      style="background-color: {dotColor(company, line)}"
-    ></span>
-    <span class="flex flex-col min-w-0">
-      <span class="text-xs font-medium truncate">{line}</span>
-      {#if lineNameMapping[line]?.en}
-        <span class="text-[9px] opacity-60 truncate"
-          >{lineNameMapping[line].en}</span
-        >
-      {/if}
-    </span>
-  </button>
-{:else}
-  <button
-    class="group flex flex-row justify-between items-center flex-nowrap gap-2 w-full text-muted cursor-pointer text-left transition-all duration-200 p-2 rounded-lg mb-1.5 hover:bg-selected-background hover:text-secondary {selected
-      ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
-      : ''}"
-    on:click
-  >
-    <span class="flex flex-col min-w-0">
-      <span class="text-sm font-medium">{line}</span>
-      {#if lineNameMapping[line]?.en}
-        <span class="text-[10px] opacity-60 mt-[1px]"
-          >{lineNameMapping[line].en}</span
-        >
-      {/if}
-    </span>
-    <span
-      class="w-2 h-2 rounded-full shrink-0 transition-all duration-200 group-hover:scale-125"
-      style="background-color: {dotColor(company, line)}"
-    ></span>
-  </button>
-{/if}
+<button
+  class="group flex flex-row justify-between items-center flex-nowrap gap-2 w-full text-muted cursor-pointer text-left transition-all duration-200 p-2 rounded-lg mb-1.5 hover:bg-selected-background hover:text-secondary {selected
+    ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
+    : ''}"
+  on:click
+>
+  <span class="flex flex-col min-w-0">
+    <span class="text-sm font-medium">{line}</span>
+    {#if lineNameMapping[line]?.en}
+      <span class="text-[10px] opacity-60 mt-[1px]"
+        >{lineNameMapping[line].en}</span
+      >
+    {/if}
+  </span>
+  <span
+    class="w-2 h-2 rounded-full shrink-0 transition-all duration-200 group-hover:scale-125"
+    style="background-color: {dotColor(company, line)}"
+  ></span>
+</button>

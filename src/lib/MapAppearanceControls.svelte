@@ -59,7 +59,7 @@
 </div>
 
 <!-- Map Appearance Panel (bottom-right, collapsible) -->
-<div class="hud-controls absolute bottom-5 right-5 z-[5] w-[232px]">
+<div class="hud-controls absolute bottom-5 right-5 z-[5] w-54">
   <div
     class="bg-panel-background backdrop-blur-md rounded-xl border border-border shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200"
   >
@@ -119,9 +119,7 @@
         <ToggleOption
           bind:checked={showLineColors}
           label="Line colors"
-          description={showLineColors
-            ? "Official colors where available"
-            : "Single-color rendering"}
+          description={""}
           color="var(--color-accent-primary)"
         >
           <Palette
@@ -134,13 +132,15 @@
         <ToggleOption
           bind:checked={showBaseMapOutline}
           label="Base map outline"
-          description={showBaseMapOutline
-            ? "Land outline visible"
-            : "Land outline hidden"}
+          description={""}
           color="var(--color-accent-tertiary)"
         >
           {#if showBaseMapOutline}
-            <Eye size={16} strokeWidth={2.2} class="text-[var(--color-accent-tertiary)]" />
+            <Eye
+              size={16}
+              strokeWidth={2.2}
+              class="text-[var(--color-accent-tertiary)]"
+            />
           {:else}
             <EyeOff size={16} strokeWidth={2.2} class="text-muted" />
           {/if}
@@ -149,9 +149,7 @@
         <ToggleOption
           bind:checked={forceShowStations}
           label="Stations"
-          description={forceShowStations
-            ? "Always visible"
-            : "Visible when zoomed in"}
+          description={""}
           color="var(--color-accent-secondary)"
         >
           <Circle

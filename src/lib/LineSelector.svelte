@@ -152,7 +152,8 @@
                   {line}
                   company={selectedCompany}
                   selected={selectedLine === line}
-                  on:click={() => dispatch("selectline", { company: selectedCompany, line })}
+                  on:click={() =>
+                    dispatch("selectline", { company: selectedCompany, line })}
                 />
               {/each}
             </div>
@@ -209,8 +210,8 @@
                 {line}
                 company={selectedCompany}
                 selected={selectedLine === line}
-                compact
-                on:click={() => dispatch("selectline", { company: selectedCompany, line })}
+                on:click={() =>
+                  dispatch("selectline", { company: selectedCompany, line })}
               />
             {/each}
           </div>
@@ -219,7 +220,7 @@
         <!-- Companies view -->
         <div class="flex-1 overflow-y-auto p-2 scrollbar-thin">
           <button
-            class="w-full border text-muted cursor-pointer text-left transition-all duration-200 p-[8px_12px] rounded-lg mb-2 border-dashed border-border hover:bg-[var(--color-accent-primary-soft)] {selectedCompany ===
+            class="w-full text-muted cursor-pointer text-left transition-all duration-200 p-[8px_12px] rounded-lg mb-2 hover:bg-[var(--color-accent-primary-soft)] {selectedCompany ===
               null && selectedLine === null
               ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
               : 'bg-transparent'}"

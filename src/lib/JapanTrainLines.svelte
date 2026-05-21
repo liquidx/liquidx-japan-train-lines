@@ -102,8 +102,10 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations = forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
-    const adjustedStationRadius = (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
+    const showStations =
+      forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
+    const adjustedStationRadius =
+      (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
       station.setAttribute("r", adjustedStationRadius);
       station.style.display = showStations ? "" : "none";
@@ -135,7 +137,13 @@
     applyMapTransform();
   }
 
-  $: mapTransform = { zoom, panX, panY, forceShowStations, stationSizeMultiplier };
+  $: mapTransform = {
+    zoom,
+    panX,
+    panY,
+    forceShowStations,
+    stationSizeMultiplier,
+  };
   $: if (viewerEl && mapTransform) {
     applyMapTransform();
   }
@@ -431,33 +439,6 @@
         >
       </div>
     {/if}
-
-    <!-- Line Info + Keyboard Hint -->
-    <div
-      class="absolute bottom-5 left-5 bg-panel-background border border-border rounded-lg overflow-hidden pointer-events-none"
-    >
-      <div class="px-3 py-2 border-b border-border text-xs">
-        {#if selectedCompany}
-          <span class="text-accent-secondary font-medium"
-            >{selectedCompany}</span
-          >
-          {#if selectedLine}
-            <span class="text-muted mx-1.5">→</span>
-            <span class="text-secondary">{selectedLine}</span>
-          {/if}
-        {:else}
-          <span class="font-medium text-accent-primary">
-            {regions.find((r) => r.id === selectedRegion)?.name || "All Japan"} Network
-          </span>
-        {/if}
-      </div>
-      <div class="px-3 py-1.5 text-[11px] text-muted">
-        Press <kbd
-          class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
-          >➔</kbd
-        > to cycle lines
-      </div>
-    </div>
   </div>
 
   <!-- Controls Panel -->
