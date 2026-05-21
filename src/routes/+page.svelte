@@ -7,6 +7,11 @@
   let japanOutlineGeojsonUrl = "/japan-outline.geojson";
 </script>
 
+<svelte:head>
+  <title>Japan Train Line Maps | liquidx.net</title>
+  <meta name="description" content="Interactive train line maps for Japan" />
+</svelte:head>
+
 <JapanTrainLines
   railroadGeoJsonUrl={geojsonUrl}
   stationGeoJsonUrl={stationGeojsonUrl}

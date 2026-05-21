@@ -32,6 +32,14 @@
   let startY = 0;
   let initPanX = 0;
   let initPanY = 0;
+
+  // Touch pinch-to-zoom state
+  let initialPinchDistance = 0;
+  let initialPinchZoom = 0;
+  let initialPinchMapX = 0;
+  let initialPinchMapY = 0;
+  let initialPinchSvgX = 0;
+  let initialPinchSvgY = 0;
   const lineStrokeWidth = 2;
   const minStationRadius = lineStrokeWidth * 0.1;
   const maxStationRadius = lineStrokeWidth * 1.5;
@@ -91,7 +99,7 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations = computePixelsPerDegree(mapInfo, zoom) > 600;
+    const showStations = computePixelsPerDegree(mapInfo, zoom) > 700;
     const adjustedStationRadius = stationRadiusForZoom(zoom) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
       station.setAttribute("r", adjustedStationRadius);
@@ -223,6 +231,58 @@
     zoomToPoint(clientPointToSvgPoint(e.clientX, e.clientY), 2);
   };
 
+  const getTouchDistance = (t1, t2) =>
+    Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const point = clientPointToSvgPoint(touch.clientX, touch.clientY);
+      isDragging = true;
+      startX = point.x;
+      startY = point.y;
+      initPanX = panX;
+      initPanY = panY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      initialPinchDistance = getTouchDistance(t1, t2);
+      initialPinchZoom = zoom;
+      const midClientX = (t1.clientX + t2.clientX) / 2;
+      const midClientY = (t1.clientY + t2.clientY) / 2;
+      const center = clientPointToSvgPoint(midClientX, midClientY);
+      initialPinchSvgX = center.x;
+      initialPinchSvgY = center.y;
+      initialPinchMapX = (center.x - panX) / zoom;
+      initialPinchMapY = (center.y - panY) / zoom;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      const touch = e.touches[0];
+      const point = clientPointToSvgPoint(touch.clientX, touch.clientY);
+      panX = initPanX + (point.x - startX);
+      panY = initPanY + (point.y - startY);
+    } else if (e.touches.length === 2) {
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const newDist = getTouchDistance(t1, t2);
+      const newZoom = Math.max(
+        0.15,
+        Math.min(20, initialPinchZoom * (newDist / initialPinchDistance)),
+      );
+      panX = initialPinchSvgX - initialPinchMapX * newZoom;
+      panY = initialPinchSvgY - initialPinchMapY * newZoom;
+      zoom = newZoom;
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (e.touches.length < 2) {
+      isDragging = false;
+    }
+  };
+
   const selectRegion = (regionId) => {
     selectedRegion = regionId;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
@@ -299,15 +359,17 @@
 >
   <!-- Title / Header Overlay -->
   <header
-    class="h-16 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center px-6 z-10 transition-colors duration-200"
+    class="py-4 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center px-6 z-10 transition-colors duration-200"
   >
-    <div class="flex items-center gap-2.5">
+    <div class="flex items-left gap-2 md:flex-row flex-col md:items-center">
       <span class="text-xl">🚇</span>
       <h1 class="text-md font-medium m-0 text-primary">
-        Japan Train Line Maps
+        Japan Train Lines by <a href="http://liquidx.net" class="underline"
+          >@liquidx</a
+        >
       </h1>
-      <span class="text-xs text-muted ml-1.5 pl-3 border-l border-border"
-        >鉄道路線図</span
+      <span class="text-md text-primary md:pl-3 md:border-l border-border"
+        >日本鉄道路線図</span
       >
     </div>
   </header>
@@ -324,6 +386,9 @@
     on:wheel={handleWheel}
     on:mouseover={handleStationMouseOver}
     on:mouseout={handleStationMouseOut}
+    on:touchstart={handleTouchStart}
+    on:touchmove={handleTouchMove}
+    on:touchend={handleTouchEnd}
     class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-border transition-colors duration-200"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
