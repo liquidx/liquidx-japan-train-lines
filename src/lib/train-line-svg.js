@@ -22,15 +22,27 @@ const fallback_color_for_line = (company_name, line_name) => {
   return colors[hash];
 };
 
+const svg_paint = (color) => {
+  if (color.startsWith("#") || color.startsWith("var(") || color.startsWith("rgb")) {
+    return color;
+  }
+  return `#${color}`;
+};
+
 const color_for_line = (company_name, line_name, options = {}) => {
   if (options.showLineColors === false) {
-    return "ffffff";
+    return "var(--color-map-line-mono)";
   }
 
-  return (
+  const lineColor =
     getLineColor(company_name, line_name) ||
-    fallback_color_for_line(company_name, line_name)
-  );
+    fallback_color_for_line(company_name, line_name);
+
+  if (options.mapTheme === "light" && lineColor.toLowerCase() === "ffffff") {
+    return "var(--color-map-line-mono)";
+  }
+
+  return lineColor;
 };
 
 const features_for_line = (
@@ -282,7 +294,7 @@ export const svg_from_segments = (
     }
 
     if (combined_d) {
-      svg_string += `    <path class="japan-outline-path" fill="#111625" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" vector-effect="non-scaling-stroke" fill-rule="evenodd" d="${combined_d.trim()}"></path>\n`;
+      svg_string += `    <path class="japan-outline-path" fill="var(--color-map-land-fill)" stroke="var(--color-map-land-stroke)" stroke-width="1" vector-effect="non-scaling-stroke" fill-rule="evenodd" d="${combined_d.trim()}"></path>\n`;
     }
   }
 
@@ -303,7 +315,7 @@ export const svg_from_segments = (
     let segCompany = segment.properties ? segment.properties["運営会社"] : company_name;
     let strokeColor = color_for_line(segCompany, segLine, options);
     n += 1;
-    let svg_path = `  <path id="${path_id}" stroke="#${strokeColor}" stroke-width="2" vector-effect="non-scaling-stroke" d="${svg_points}"></path>\n`;
+    let svg_path = `  <path id="${path_id}" stroke="${svg_paint(strokeColor)}" stroke-width="2" vector-effect="non-scaling-stroke" d="${svg_points}"></path>\n`;
     svg_string += svg_path;
   }
 
@@ -322,7 +334,7 @@ export const svg_from_segments = (
     let station_company = station.properties ? station.properties["運営会社"] : company_name;
     let station_color = color_for_line(station_company, station_line, options);
     station_n += 1;
-    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="#${station_color}" stroke="#${station_color}" stroke-width="0.2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
+    let station_svg = `  <circle id="${station_id}" class="station-dot" cx="${station_x}" cy="${station_y}" r="2" fill="${svg_paint(station_color)}" stroke="${svg_paint(station_color)}" stroke-width="0.2" vector-effect="non-scaling-stroke" data-station-name="${station_name}"><title>${station_name}</title></circle>\n`;
     svg_string += station_svg;
   }
   svg_string += "</g>\n";

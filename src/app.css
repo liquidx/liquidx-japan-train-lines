@@ -1,5 +1,82 @@
 @import "tailwindcss";
 
+.theme-dark {
+  color-scheme: dark;
+  --color-app-bg: #090d16;
+  --color-header-bg: rgb(15 23 42 / 0.8);
+  --color-map-bg: #0b0f19;
+  --color-panel-bg: #0f172a;
+  --color-panel-muted: rgb(15 23 42 / 0.4);
+  --color-panel-strong: rgb(15 23 42 / 0.9);
+  --color-surface: rgb(2 6 23 / 0.75);
+  --color-surface-soft: rgb(255 255 255 / 0.04);
+  --color-surface-hover: rgb(255 255 255 / 0.06);
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-soft: rgb(255 255 255 / 0.05);
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #64748b;
+  --color-text-faint: #475569;
+  --color-accent-primary: #a78bfa;
+  --color-accent-primary-soft: rgb(168 85 247 / 0.1);
+  --color-accent-primary-border: rgb(168 85 247 / 0.28);
+  --color-accent-secondary: #38bdf8;
+  --color-accent-secondary-soft: rgb(14 165 233 / 0.1);
+  --color-accent-secondary-border: rgb(14 165 233 / 0.25);
+  --color-accent-tertiary: #22d3ee;
+  --color-switch-off: #334155;
+  --color-switch-knob: #ffffff;
+  --color-map-grid: rgb(255 255 255 / 0.02);
+  --color-map-land-fill: #111625;
+  --color-map-land-stroke: rgb(255 255 255 / 0.05);
+  --color-map-line-mono: #f8fafc;
+  --color-map-station-mono: #f8fafc;
+  --shadow-panel: 0 10px 25px -5px rgb(0 0 0 / 0.5);
+}
+
+.theme-light {
+  color-scheme: light;
+  --color-app-bg: #eef3f7;
+  --color-header-bg: rgb(255 255 255 / 0.88);
+  --color-map-bg: #e9eef3;
+  --color-panel-bg: #f8fafc;
+  --color-panel-muted: rgb(255 255 255 / 0.56);
+  --color-panel-strong: rgb(255 255 255 / 0.92);
+  --color-surface: rgb(255 255 255 / 0.86);
+  --color-surface-soft: rgb(15 23 42 / 0.04);
+  --color-surface-hover: rgb(15 23 42 / 0.06);
+  --color-border: rgb(15 23 42 / 0.12);
+  --color-border-soft: rgb(15 23 42 / 0.08);
+  --color-text-primary: #111827;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-text-faint: #94a3b8;
+  --color-accent-primary: #7c3aed;
+  --color-accent-primary-soft: rgb(124 58 237 / 0.1);
+  --color-accent-primary-border: rgb(124 58 237 / 0.24);
+  --color-accent-secondary: #0369a1;
+  --color-accent-secondary-soft: rgb(3 105 161 / 0.1);
+  --color-accent-secondary-border: rgb(3 105 161 / 0.24);
+  --color-accent-tertiary: #0e7490;
+  --color-switch-off: #cbd5e1;
+  --color-switch-knob: #ffffff;
+  --color-map-grid: rgb(15 23 42 / 0.06);
+  --color-map-land-fill: #d7e0e8;
+  --color-map-land-stroke: rgb(15 23 42 / 0.11);
+  --color-map-line-mono: #1f2937;
+  --color-map-station-mono: #1f2937;
+  --shadow-panel: 0 12px 30px -14px rgb(15 23 42 / 0.38);
+}
+
+.map-viewport {
+  background-color: var(--color-map-bg);
+  background-image:
+    linear-gradient(var(--color-map-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-map-grid) 1px, transparent 1px);
+  background-position: center;
+  background-size: 30px 30px;
+}
+
 #svg-content-wrapper svg {
   pointer-events: auto;
   width: 100%;

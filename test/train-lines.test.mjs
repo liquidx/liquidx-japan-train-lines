@@ -274,6 +274,73 @@ describe("train-lines", () => {
       expect(visibleSvg).toContain('class="japan-outline-path"');
       expect(hiddenSvg).not.toContain('class="japan-outline-path"');
     });
+
+    it("uses CSS tokens for monochrome lines and outline", () => {
+      const railroadGeojson = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄"
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [139.1, 35.1],
+                [139.2, 35.2]
+              ]
+            }
+          }
+        ]
+      };
+      const stationGeojson = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄",
+              "駅名": "渋谷"
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [139.1, 35.1],
+                [139.12, 35.12]
+              ]
+            }
+          }
+        ]
+      };
+      const japanOutlineGeoJson = {
+        geometries: [
+          {
+            type: "LineString",
+            coordinates: [
+              [139.0, 35.0],
+              [139.3, 35.0],
+              [139.3, 35.3]
+            ]
+          }
+        ]
+      };
+
+      const svg = svg_from_segments(
+        railroadGeojson,
+        stationGeojson,
+        "tokyo",
+        "東京地下鉄",
+        "銀座線",
+        640,
+        null,
+        { japanOutlineGeoJson, showLineColors: false }
+      );
+
+      expect(svg).toContain('stroke="var(--color-map-line-mono)"');
+      expect(svg).toContain('fill="var(--color-map-line-mono)"');
+      expect(svg).toContain('fill="var(--color-map-land-fill)"');
+      expect(svg).toContain('stroke="var(--color-map-land-stroke)"');
+      expect(svg).not.toContain('stroke="#ffffff"');
+    });
   });
 
   describe("filterGeoJsonByBounds & getTokyoGeoJson", () => {
