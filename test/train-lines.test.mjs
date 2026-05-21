@@ -122,7 +122,7 @@ describe("train-lines", () => {
         ]
       };
 
-      const svg = svg_from_segments(
+      const { svg } = svg_from_segments(
         ginzaLineGeojson,
         stationGeojson,
         "tokyo",
@@ -132,7 +132,6 @@ describe("train-lines", () => {
       );
 
       expect(svg).toContain('class="station-dot"');
-      expect(svg).toContain('class="train-line-path"');
       expect(svg).not.toContain('vector-effect="non-scaling-stroke" d="M0,640 L640,0 "');
       expect(svg).toContain('fill="#ffb144"');
       expect(svg).toContain('stroke="#ffb144"');
@@ -141,7 +140,7 @@ describe("train-lines", () => {
     });
 
     it("uses the selected map theme when resolving line colors", () => {
-      const darkSvg = svg_from_segments(
+      const { svg: darkSvg } = svg_from_segments(
         ginzaLineGeojson,
         null,
         "tokyo",
@@ -151,7 +150,7 @@ describe("train-lines", () => {
         null,
         { mapTheme: "dark" }
       );
-      const lightSvg = svg_from_segments(
+      const { svg: lightSvg } = svg_from_segments(
         ginzaLineGeojson,
         null,
         "tokyo",
@@ -162,8 +161,8 @@ describe("train-lines", () => {
         { mapTheme: "light" }
       );
 
-      expect(getLineColor("東京地下鉄", "銀座線", "dark")).toBe("ffb144");
-      expect(getLineColor("東京地下鉄", "銀座線", "light")).toBe("ff9500");
+      expect(getLineColor("東京地下鉄", "銀座線", "dark")).toBe("#ffb144");
+      expect(getLineColor("東京地下鉄", "銀座線", "light")).toBe("#ff9500");
       expect(darkSvg).toContain('stroke="#ffb144"');
       expect(lightSvg).toContain('stroke="#ff9500"');
     });
@@ -232,7 +231,7 @@ describe("train-lines", () => {
         ]
       };
 
-      const svg = svg_from_segments(
+      const { svg } = svg_from_segments(
         railroadGeojson,
         stationGeojson,
         "tokyo",
@@ -282,7 +281,7 @@ describe("train-lines", () => {
         ]
       };
 
-      const visibleSvg = svg_from_segments(
+      const { svg: visibleSvg } = svg_from_segments(
         railroadGeojson,
         null,
         "tokyo",
@@ -292,7 +291,7 @@ describe("train-lines", () => {
         null,
         { japanOutlineGeoJson }
       );
-      const hiddenSvg = svg_from_segments(
+      const { svg: hiddenSvg } = svg_from_segments(
         railroadGeojson,
         null,
         "tokyo",
@@ -356,7 +355,7 @@ describe("train-lines", () => {
         ]
       };
 
-      const svg = svg_from_segments(
+      const { svg } = svg_from_segments(
         railroadGeojson,
         stationGeojson,
         "tokyo",

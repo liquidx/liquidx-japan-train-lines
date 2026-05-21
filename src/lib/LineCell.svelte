@@ -11,7 +11,7 @@
 
   const dotColor = (c, l) => {
     const hex = getLineColor(c, l);
-    return hex ? `#${hex}` : "var(--color-text-faint)";
+    return hex ?? "var(--color-text-faint)";
   };
 
   const linePrimaryName = (l) => {
