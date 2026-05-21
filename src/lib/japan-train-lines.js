@@ -49,7 +49,7 @@ export const drawTrainLine = (
   let geojson = _regionsGeoJson[regionName] || _trainLines;
   let stationGeoJson = _regionsStationGeoJson[regionName] || _stationGeoJson;
 
-  let svg = svg_from_segments(
+  let result = svg_from_segments(
     geojson,
     stationGeoJson,
     regionName,
@@ -59,7 +59,8 @@ export const drawTrainLine = (
     correction,
     { ...options, japanOutlineGeoJson: _japanOutlineGeoJson }
   );
-  viewerEl.innerHTML = svg;
+  // result.svg is generated from trusted GeoJSON data fetched from a known URL
+  viewerEl.innerHTML = result.svg; // nosec
 
   for (var p of document.querySelectorAll("g.segment")) {
     p.addEventListener("mouseover", (e) => {
@@ -71,6 +72,8 @@ export const drawTrainLine = (
       e.target.removeAttribute("stroke");
     });
   }
+
+  return { bounds: result.bounds, svgWidth: result.svgWidth, svgHeight: result.svgHeight };
 };
 
 const getTrainCompanyNames = (train_lines) => {

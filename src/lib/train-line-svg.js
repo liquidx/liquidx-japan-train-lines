@@ -339,5 +339,5 @@ export const svg_from_segments = (
   }
   svg_string += "</g>\n";
   svg_string += "</svg>\n";
-  return svg_string;
+  return { svg: svg_string, bounds: b, svgWidth: width_px, svgHeight: height_px };
 };

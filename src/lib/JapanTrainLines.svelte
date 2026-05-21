@@ -26,6 +26,7 @@
   let showLineColors = true;
   let showBaseMapOutline = true;
   let mapTheme = "dark";
+  let mapInfo = null;
 
   // Pan & Zoom State
   let zoom = 1;
@@ -80,6 +81,11 @@
     );
   };
 
+  const computePixelsPerDegree = (info, currentZoom) =>
+    info
+      ? (info.svgWidth / (info.bounds.max_x - info.bounds.min_x)) * currentZoom
+      : 0;
+
   const applyMapTransform = () => {
     const mapLayer = viewerEl?.querySelector("[data-map-layer]");
     if (!mapLayer) return;
@@ -91,7 +97,7 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations = zoom > 2;
+    const showStations = computePixelsPerDegree(mapInfo, zoom) > 600;
     const adjustedStationRadius = stationRadiusForZoom(zoom) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
       station.setAttribute("r", adjustedStationRadius);
@@ -113,7 +119,7 @@
 
   // Reactive redraw whenever region, company, line, or render option changes
   $: if (viewerEl && regions.length > 0) {
-    drawTrainLine(
+    mapInfo = drawTrainLine(
       selectedRegion,
       selectedCompany,
       selectedLine,
@@ -128,6 +134,10 @@
   $: if (viewerEl && mapTransform) {
     applyMapTransform();
   }
+
+  // World-coordinate zoom: screen pixels per degree of longitude.
+  // Increases as you zoom in, independent of SVG dimensions or region extents.
+  $: pixelsPerDegree = computePixelsPerDegree(mapInfo, zoom);
 
   const handleReset = () => {
     zoom = 1;
