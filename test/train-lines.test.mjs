@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { joinSegments, lineNames } from "../src/lib/train-lines.js";
 import { svg_from_segments } from "../src/lib/train-line-svg.js";
+import { filterGeoJsonByBounds, getTokyoGeoJson } from "../src/lib/japan-train-lines.js";
 import fs from "fs";
 
 describe("train-lines", () => {
@@ -214,7 +215,117 @@ describe("train-lines", () => {
       expect(svg).toContain('stroke="#f30100"');
       // Check that both stations are rendered with their respective line colors
       expect(svg).toContain('fill="#ff9500"');
+      // Check that both stations are rendered with their respective line colors
       expect(svg).toContain('fill="#f30100"');
+    });
+  });
+
+  describe("filterGeoJsonByBounds & getTokyoGeoJson", () => {
+    const mockGeojson = {
+      features: [
+        {
+          properties: {
+            "路線名": "銀座線",
+            "運営会社": "東京地下鉄"
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [139.1, 35.1],
+              [139.2, 35.2]
+            ]
+          }
+        },
+        {
+          properties: {
+            "路線名": "銀座線",
+            "運営会社": "東京地下鉄"
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [142.1, 38.1],
+              [142.2, 38.2]
+            ]
+          }
+        },
+        {
+          properties: {
+            "路線名": "丸ノ内線",
+            "運営会社": "東京地下鉄"
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [142.1, 38.1],
+              [142.2, 38.2]
+            ]
+          }
+        }
+      ]
+    };
+
+    const kantoBounds = { min_lng: 138.3, max_lng: 141.0, min_lat: 34.8, max_lat: 37.2 };
+
+    it("should retain all segments of a line if at least one segment is in the region", () => {
+      const result = filterGeoJsonByBounds(mockGeojson, kantoBounds);
+      
+      const lines = result.features.map(f => `${f.properties["運営会社"]}::${f.properties["路線名"]}`);
+      
+      expect(result.features.length).toBe(2);
+      expect(lines).toEqual([
+        "東京地下鉄::銀座線",
+        "東京地下鉄::銀座線"
+      ]);
+    });
+
+    it("should correctly filter stations using the railroad GeoJSON to match lines", () => {
+      const mockStations = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄",
+              "駅名": "渋谷"
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [139.1, 35.1]
+            }
+          },
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄",
+              "駅名": "浅草"
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [142.1, 38.1]
+            }
+          },
+          {
+            properties: {
+              "路線名": "丸ノ内線",
+              "運営会社": "東京地下鉄",
+              "駅名": "新宿"
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [142.1, 38.1]
+            }
+          }
+        ]
+      };
+
+      const result = filterGeoJsonByBounds(mockStations, kantoBounds, mockGeojson);
+      
+      const stations = result.features.map(f => f.properties["駅名"]);
+      
+      expect(result.features.length).toBe(2);
+      expect(stations).toContain("渋谷");
+      expect(stations).toContain("浅草");
+      expect(stations).not.toContain("新宿");
     });
   });
 });

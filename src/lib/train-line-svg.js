@@ -1,5 +1,6 @@
 import { joinSegments } from "./train-lines.js";
 import { getLineColor } from "./line-colors.js";
+import { regions } from "./regions.js";
 
 const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
 
@@ -226,8 +227,22 @@ export const svg_from_segments = (
       });
     }
   }
+  let b;
+  if (!company_name && region_name && region_name !== "japan") {
+    const region = regions.find((r) => r.id === region_name);
+    if (region && region.bounds) {
+      b = {
+        min_x: region.bounds.min_lng,
+        max_x: region.bounds.max_lng,
+        min_y: region.bounds.min_lat,
+        max_y: region.bounds.max_lat,
+      };
+    }
+  }
 
-  let b = bounding_box(segments);
+  if (!b) {
+    b = bounding_box(segments);
+  }
   let width = b.max_x - b.min_x;
   let height = b.max_y - b.min_y;
   let width_px, height_px;
@@ -242,6 +257,35 @@ export const svg_from_segments = (
   let svg_string = `<svg width="${width_px}px" height="${height_px}px" viewBox="0 0 ${width_px} ${height_px}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n`;
   svg_string +=
     '  <g data-map-layer fill="none" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="square">\n';
+
+  if (options.japanOutlineGeoJson) {
+    const geometries = options.japanOutlineGeoJson.geometries || [];
+    const segments = geometries.map((geom) => ({ geometry: geom }));
+    const joined = joinSegments(segments);
+
+    let combined_d = "";
+    for (const feature of joined) {
+      let svg_points = "";
+      for (const point of feature.geometry.coordinates) {
+        const x = ((point[0] - b.min_x) * width_px) / width;
+        const y = height_px - ((point[1] - b.min_y) * height_px) / height;
+        if (!svg_points) {
+          svg_points += `M${x},${y} `;
+        } else {
+          svg_points += `L${x},${y} `;
+        }
+      }
+      if (svg_points) {
+        svg_points += "Z";
+        combined_d += svg_points + " ";
+      }
+    }
+
+    if (combined_d) {
+      svg_string += `    <path class="japan-outline-path" fill="#111625" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" vector-effect="non-scaling-stroke" fill-rule="evenodd" d="${combined_d.trim()}"></path>\n`;
+    }
+  }
+
   let n = 1;
   for (var segment of segments) {
     let svg_points = "";

@@ -5,6 +5,7 @@
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
+  export let japanOutlineGeoJsonUrl = null;
   let viewerEl;
   let regions = [];
   let regionDataMap = {};
@@ -85,7 +86,7 @@
   };
 
   onMount(async () => {
-    let data = await loadTrainLines({ railroadGeoJsonUrl, stationGeoJsonUrl });
+    let data = await loadTrainLines({ railroadGeoJsonUrl, stationGeoJsonUrl, japanOutlineGeoJsonUrl });
     regions = data.regions;
     regionDataMap = data.regionData;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
