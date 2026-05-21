@@ -1,7 +1,10 @@
 <script>
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
-  import { lineNameMapping, companyNameMapping } from "$lib/line-name-mapping.js";
+  import {
+    lineNameMapping,
+    companyNameMapping,
+  } from "$lib/line-name-mapping.js";
   import {
     Eye,
     EyeOff,
@@ -381,12 +384,12 @@
 
         <div class="p-2">
           <div
-            class="grid grid-cols-2 gap-1 mb-1 rounded-lg bg-[var(--color-surface-soft)] p-1 border border-[color:var(--color-border-soft)]"
+            class="grid grid-cols-2 gap-1 mb-1 rounded-lg bg-[var(--color-surface-soft)] p-1 border border-border"
           >
             <button
               class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-semibold cursor-pointer transition-all duration-200 {mapTheme ===
               'dark'
-                ? 'bg-[var(--color-accent-primary-soft)] border-[color:var(--color-accent-primary-border)] text-[var(--color-accent-primary)]'
+                ? 'bg-[var(--color-accent-primary-soft)] border-border text-[var(--color-accent-primary)]'
                 : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]'}"
               on:click={() => (mapTheme = "dark")}
               aria-pressed={mapTheme === "dark"}
@@ -397,7 +400,7 @@
             <button
               class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-semibold cursor-pointer transition-all duration-200 {mapTheme ===
               'light'
-                ? 'bg-[var(--color-accent-primary-soft)] border-[color:var(--color-accent-primary-border)] text-[var(--color-accent-primary)]'
+                ? 'bg-[var(--color-accent-primary-soft)] border-border text-[var(--color-accent-primary)]'
                 : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]'}"
               on:click={() => (mapTheme = "light")}
               aria-pressed={mapTheme === "light"}
@@ -526,13 +529,15 @@
         style="left: {hoveredStation.x}px; top: {hoveredStation.y}px; transform: translate(-50%, calc(-100% - 10px));"
       >
         {hoveredStation.name}
-        <span class="block text-[10px] font-normal text-muted mt-0.5">{hoveredStation.lineName}</span>
+        <span class="block text-[10px] font-normal text-muted mt-0.5"
+          >{hoveredStation.lineName}</span
+        >
       </div>
     {/if}
 
     <!-- Keyboard Hint -->
     <div
-      class="absolute bottom-5 left-5 text-[11px] text-[var(--color-text-muted)] bg-panel-background px-3 py-1.5 rounded border border-[color:var(--color-border-soft)] pointer-events-none"
+      class="absolute bottom-5 left-5 text-[11px] text-[var(--color-text-muted)] bg-panel-background px-3 py-1.5 rounded border border-border pointer-events-none"
     >
       Press <kbd
         class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
@@ -554,7 +559,7 @@
         <button
           class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-transparent border border-transparent text-[var(--color-text-muted)] cursor-pointer whitespace-nowrap transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)] {selectedRegion ===
           r.id
-            ? 'bg-[var(--color-accent-primary-soft)] border-[color:var(--color-accent-primary-border)] text-[var(--color-accent-primary)]'
+            ? 'bg-[var(--color-accent-primary-soft)] border-border text-[var(--color-accent-primary)]'
             : ''}"
           on:click={() => selectRegion(r.id)}
         >
@@ -562,7 +567,7 @@
             class="w-1.5 h-1.5 rounded-full transition-all duration-200 border bg-transparent {selectedRegion ===
             r.id
               ? 'border-[color:var(--color-accent-primary)] bg-[var(--color-accent-primary)] shadow-[0_0_6px_var(--color-accent-primary)]'
-              : 'border-[color:var(--color-accent-primary-border)]'}"
+              : 'border-border'}"
           ></span>
           <div class="flex flex-col items-start leading-[1.1]">
             <span class="text-[11px] font-semibold">{r.nameJa}</span>
@@ -578,7 +583,7 @@
         class="flex flex-col h-full w-[320px] border-r border-border bg-[var(--color-panel-muted)]"
       >
         <div
-          class="h-12 flex justify-between items-center px-5 border-b border-[color:var(--color-border-soft)] bg-[var(--color-surface-soft)]"
+          class="h-12 flex justify-between items-center px-5 border-b border-border bg-[var(--color-surface-soft)]"
         >
           <h2
             class=" text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
@@ -592,7 +597,7 @@
         </div>
         <div class="flex-1 overflow-y-auto p-3 scrollbar-thin">
           <button
-            class="w-full border text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 p-[10px_14px] rounded-lg mb-1.5 hover:text-[var(--color-text-secondary)] border-dashed border-[color:var(--color-accent-primary-border)] hover:bg-[var(--color-accent-primary-soft)] {selectedCompany ===
+            class="w-full border text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 p-[10px_14px] rounded-lg mb-1.5 hover:text-[var(--color-text-secondary)] border-dashed border-border hover:bg-[var(--color-accent-primary-soft)] {selectedCompany ===
               null && selectedLine === null
               ? 'bg-[var(--color-accent-primary-soft)] text-[var(--color-accent-primary)]'
               : 'bg-transparent'}"
@@ -629,7 +634,9 @@
                 <div class="flex flex-col min-w-0">
                   <span class="text-sm font-medium">{company.company}</span>
                   {#if companyNameMapping[company.company]?.en}
-                    <span class="text-[10px] opacity-60 mt-[1px]">{companyNameMapping[company.company].en}</span>
+                    <span class="text-[10px] opacity-60 mt-[1px]"
+                      >{companyNameMapping[company.company].en}</span
+                    >
                   {/if}
                   <span
                     class="text-[10px] mt-[1px] transition-colors {selectedCompany ===
@@ -648,7 +655,7 @@
       <!-- Right Column: Train Lines Grid -->
       <div class="flex flex-col h-full flex-1 bg-[var(--color-surface-soft)]">
         <div
-          class="h-12 flex justify-between items-center px-5 border-b border-[color:var(--color-border-soft)] bg-[var(--color-surface-soft)]"
+          class="h-12 flex justify-between items-center px-5 border-b border-border bg-[var(--color-surface-soft)]"
         >
           <h2
             class=" text-[14px] font-semibold m-0 text-[var(--color-text-secondary)] uppercase tracking-[0.5px]"
@@ -678,7 +685,7 @@
             >
               {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line}
                 <button
-                  class="group w-full border bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 flex items-center gap-2.5 p-[12px_16px] rounded-lg border-[color:var(--color-border-soft)] hover:bg-[var(--color-surface-hover)] hover:border-border hover:text-[var(--color-text-primary)] {selectedLine ===
+                  class="group w-full border bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] cursor-pointer text-left transition-all duration-200 flex items-center gap-2.5 p-[12px_16px] rounded-lg border-border hover:bg-[var(--color-surface-hover)] hover:border-border hover:text-[var(--color-text-primary)] {selectedLine ===
                   line
                     ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
                     : ''}"
