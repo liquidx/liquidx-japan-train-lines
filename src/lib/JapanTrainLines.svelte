@@ -4,6 +4,7 @@
   import {
     lineNameMapping,
     companyNameMapping,
+    stationNameMapping,
   } from "$lib/line-name-mapping.js";
   import {
     Eye,
@@ -183,8 +184,10 @@
   const handleStationMouseOver = (e) => {
     if (!e.target.classList.contains("station-dot")) return;
     const containerRect = svgViewerEl.getBoundingClientRect();
+    const name = e.target.getAttribute("data-station-name");
     hoveredStation = {
-      name: e.target.getAttribute("data-station-name"),
+      name,
+      nameEn: stationNameMapping[name] ?? null,
       lineName: e.target.getAttribute("data-line-name"),
       x: e.clientX - containerRect.left,
       y: e.clientY - containerRect.top,
@@ -529,6 +532,9 @@
         style="left: {hoveredStation.x}px; top: {hoveredStation.y}px; transform: translate(-50%, calc(-100% - 10px));"
       >
         {hoveredStation.name}
+        {#if hoveredStation.nameEn}
+          <span class="block text-[11px] font-normal text-secondary mt-0.5">{hoveredStation.nameEn}</span>
+        {/if}
         <span class="block text-[10px] font-normal text-muted mt-0.5"
           >{hoveredStation.lineName}</span
         >
