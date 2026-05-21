@@ -14,7 +14,7 @@
   --color-border: rgb(255 255 255 / 0.08);
   --color-border-soft: rgb(255 255 255 / 0.05);
   --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
+  --color-text-secondary: #8b929b;
   --color-text-muted: #64748b;
   --color-text-faint: #475569;
   --color-accent-primary: #a78bfa;
@@ -84,6 +84,8 @@
   --color-accent-tertiary: var(--color-accent-tertiary);
 
   --color-border: var(--color-border);
+
+  --text-xxs: 0.6rem;
 }
 
 

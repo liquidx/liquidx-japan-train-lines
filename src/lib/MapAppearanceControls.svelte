@@ -31,7 +31,7 @@
       on:click={() => dispatch("zoomIn")}
       title="Zoom In"
       aria-label="Zoom In"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-[var(--color-text-muted)] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent-secondary)] active:bg-[var(--color-accent-secondary-soft)] active:text-[var(--color-accent-secondary)]"
+      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
     >
       <Plus size={18} strokeWidth={2.5} />
     </button>
@@ -39,7 +39,7 @@
       on:click={() => dispatch("zoomOut")}
       title="Zoom Out"
       aria-label="Zoom Out"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-[var(--color-text-muted)] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent-secondary)] active:bg-[var(--color-accent-secondary-soft)] active:text-[var(--color-accent-secondary)]"
+      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
     >
       <Minus size={18} strokeWidth={2.5} />
     </button>
@@ -47,7 +47,7 @@
       on:click={() => dispatch("reset")}
       title="Reset View"
       aria-label="Reset View"
-      class="w-9 h-9 rounded-lg border-none bg-transparent text-[var(--color-text-muted)] flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent-secondary)] active:bg-[var(--color-accent-secondary-soft)] active:text-[var(--color-accent-secondary)]"
+      class="w-9 h-9 rounded-lg border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
     >
       <RotateCcw size={16} strokeWidth={2.5} />
     </button>
@@ -70,14 +70,16 @@
         class="text-[var(--color-accent-tertiary)]"
       />
       <h2
-        class="m-0 text-[11px] font-semibold uppercase tracking-[0.6px] text-[var(--color-text-secondary)] flex-1 text-left"
+        class="m-0 text-[11px] font-medium uppercase tracking-[0.6px] text-[var(--color-text-secondary)] flex-1 text-left"
       >
         Map Appearance
       </h2>
       <ChevronUp
         size={13}
         strokeWidth={2.5}
-        class="text-[var(--color-text-muted)] transition-transform duration-200 {collapsed ? 'rotate-180' : ''}"
+        class="text-muted transition-transform duration-200 {collapsed
+          ? 'rotate-180'
+          : ''}"
       />
     </button>
 
@@ -87,10 +89,10 @@
           class="grid grid-cols-2 gap-1 mb-1 rounded-lg bg-[var(--color-surface-soft)] p-1 border border-border"
         >
           <button
-            class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-semibold cursor-pointer transition-all duration-200 {mapTheme ===
+            class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-all duration-200 {mapTheme ===
             'dark'
-              ? 'bg-[var(--color-accent-primary-soft)] border-border text-[var(--color-accent-primary)]'
-              : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]'}"
+              ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
+              : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
             on:click={() => (mapTheme = "dark")}
             aria-pressed={mapTheme === "dark"}
           >
@@ -98,10 +100,10 @@
             Dark
           </button>
           <button
-            class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-semibold cursor-pointer transition-all duration-200 {mapTheme ===
+            class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-all duration-200 {mapTheme ===
             'light'
-              ? 'bg-[var(--color-accent-primary-soft)] border-border text-[var(--color-accent-primary)]'
-              : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)]'}"
+              ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
+              : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
             on:click={() => (mapTheme = "light")}
             aria-pressed={mapTheme === "light"}
           >
@@ -122,7 +124,8 @@
               class={showLineColors ? "text-primary" : "text-muted"}
             />
             <span class="flex flex-col min-w-0 leading-tight">
-              <span class="text-xs font-semibold text-secondary">Line colors</span>
+              <span class="text-xs font-medium text-secondary">Line colors</span
+              >
               <span class="text-[10px] text-muted truncate"
                 >{showLineColors
                   ? "Official colors where available"
@@ -156,17 +159,14 @@
                 class="text-[var(--color-accent-tertiary)]"
               />
             {:else}
-              <EyeOff
-                size={16}
-                strokeWidth={2.2}
-                class="text-[var(--color-text-muted)]"
-              />
+              <EyeOff size={16} strokeWidth={2.2} class="text-muted" />
             {/if}
             <span class="flex flex-col min-w-0 leading-tight">
-              <span class="text-xs font-semibold text-[var(--color-text-secondary)]"
+              <span
+                class="text-xs font-medium text-[var(--color-text-secondary)]"
                 >Base map outline</span
               >
-              <span class="text-[10px] text-[var(--color-text-muted)] truncate"
+              <span class="text-[10px] text-muted truncate"
                 >{showBaseMapOutline
                   ? "Land outline visible"
                   : "Land outline hidden"}</span

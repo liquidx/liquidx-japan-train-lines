@@ -303,7 +303,7 @@
   >
     <div class="flex items-center gap-2.5">
       <span class="text-xl">🚇</span>
-      <h1 class="text-md font-semibold m-0 text-primary">
+      <h1 class="text-md font-medium m-0 text-primary">
         Japan Train Line Maps
       </h1>
       <span class="text-xs text-muted ml-1.5 pl-3 border-l border-border"
@@ -381,7 +381,7 @@
           </span>
         {/if}
       </div>
-      <div class="px-3 py-1.5 text-[11px] text-[var(--color-text-muted)]">
+      <div class="px-3 py-1.5 text-[11px] text-muted">
         Press <kbd
           class="bg-[var(--color-surface-soft)] border border-border rounded px-1 py-[1px] font-inherit text-[var(--color-text-secondary)]"
           >➔</kbd
