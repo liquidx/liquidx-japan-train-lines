@@ -420,10 +420,9 @@
     } else if (e.touches.length === 2) {
       const [t1, t2] = [e.touches[0], e.touches[1]];
       const newDist = getTouchDistance(t1, t2);
-      const newZoom = Math.max(
-        0.15,
-        Math.min(20, initialPinchZoom * (newDist / initialPinchDistance)),
-      );
+      let newZoom = initialPinchZoom * (newDist / initialPinchDistance);
+      const pxPerDeg = computePixelsPerDegree(mapInfo, newZoom);
+      if (pxPerDeg < 30 || pxPerDeg > 10000) newZoom = zoom;
       panX = initialPinchSvgX - initialPinchMapX * newZoom;
       panY = initialPinchSvgY - initialPinchMapY * newZoom;
       zoom = newZoom;
