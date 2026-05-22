@@ -238,7 +238,7 @@
               <div
                 class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5"
               >
-                {#each company.lines as line}
+                {#each company.lines as line (line)}
                   <LineCell
                     {line}
                     company={selectedCompany}
