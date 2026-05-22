@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { joinSegments, lineNames } from "../src/lib/train-lines.js";
 import { svg_from_segments } from "../src/lib/train-line-svg.js";
-import { filterGeoJsonByBounds, getTokyoGeoJson } from "../src/lib/japan-train-lines.js";
+import { filterGeoJsonByBounds } from "../src/lib/japan-train-lines.js";
 import { getLineColor } from "../src/lib/line-colors.js";
 import fs from "fs";
 
@@ -423,9 +423,9 @@ describe("train-lines", () => {
 
     it("should retain all segments of a line if at least one segment is in the region", () => {
       const result = filterGeoJsonByBounds(mockGeojson, kantoBounds);
-      
+
       const lines = result.features.map(f => `${f.properties["運営会社"]}::${f.properties["路線名"]}`);
-      
+
       expect(result.features.length).toBe(2);
       expect(lines).toEqual([
         "東京地下鉄::銀座線",
@@ -473,9 +473,9 @@ describe("train-lines", () => {
       };
 
       const result = filterGeoJsonByBounds(mockStations, kantoBounds, mockGeojson);
-      
+
       const stations = result.features.map(f => f.properties["駅名"]);
-      
+
       expect(result.features.length).toBe(2);
       expect(stations).toContain("渋谷");
       expect(stations).toContain("浅草");
