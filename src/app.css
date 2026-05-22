@@ -29,7 +29,7 @@
   --color-map-grid: rgb(255 255 255 / 0.02);
   --color-map-land-fill: rgb(34, 33, 35);
   --color-map-land-stroke: rgb(51, 51, 55);
-  --color-map-line-mono: #f8fafc;
+  --color-map-line-mono: #888888;
   --color-map-station-mono: #f8fafc;
   --shadow-panel: 0 10px 25px -5px rgb(0 0 0 / 0.5);
 }
@@ -62,8 +62,8 @@
   --color-switch-knob: #ffffff;
   --color-map-grid: rgb(15 23 42 / 0.06);
   --color-map-land-fill: #d7e0e8;
-  --color-map-land-stroke: rgb(15 23 42 / 0.11);
-  --color-map-line-mono: #1f2937;
+  --color-map-land-stroke: rgba(27, 39, 69, 0.11);
+  --color-map-line-mono: #333c49;
   --color-map-station-mono: #1f2937;
   --shadow-panel: 0 12px 30px -14px rgb(15 23 42 / 0.38);
 }
