@@ -1,6 +1,6 @@
 {
   "name": "@liquidx/liquidx-japan-train-lines",
-  "version": "5.0.20260520",
+  "version": "5.1.20260522",
   "license": "MIT",
   "scripts": {
     "dev": "vite dev",
