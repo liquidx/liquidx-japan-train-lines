@@ -1,96 +1,178 @@
-# Agent Onboarding Guide (AGENTS.md)
+# Agent Onboarding Guide
 
-Welcome to the **Tokyo Train Line Maps** codebase (`@liquidx/liquidx-japan-train-lines`). This repository is a Svelte component library that visualizes public Japanese railroad GeoJSON data (provided by the Japanese Government GIS website / 国土数値情報) as interactive SVG maps.
+Welcome to the **Japan Train Line Maps** codebase (`@liquidx/liquidx-japan-train-lines`). This repository is a Svelte 5 component library that visualizes public Japanese railroad GeoJSON data (provided by the Japanese Government GIS website / 国土数値情報) as interactive SVG maps.
 
 ---
 
 ## 1. Project Purpose & Context
 
 This codebase provides two things:
-1. **A Svelte Component Library (`src/lib`)**: Centered around [JapanTrainLines.svelte](file:///Users/liquidx/p/liquidx-japan-train-lines/src/lib/JapanTrainLines.svelte), this component loads GeoJSON data, lets users browse train companies and their lines, and renders SVG maps.
+1. **A Svelte Component Library (`src/lib`)**: Centered around `JapanTrainLines.svelte`, this component loads GeoJSON data, lets users browse train companies and their lines, and renders SVG maps.
 2. **A SvelteKit Web Application**: A lightweight shell (`src/routes/+page.svelte`) used for local development, testing, and debugging.
 
 ---
 
 ## 2. Directory Structure & Key Files
 
-Here is an overview of the key files and their responsibilities:
-
 ### Core Library (`src/lib/`)
-* **JapanTrainLines.svelte**: The main Svelte component. It renders a sidebar listing train companies/lines and binds an SVG rendering container. It handles click interactions, mounts keyboard listeners (ArrowRight to traverse lines), and orchestrates data rendering.
-* **japan-train-lines.js**: Handles loading the GeoJSON file (`loadTrainLines`) and coordinates drawing line/region views (`drawTrainLine`). Also contains hardcoded coordinates bounding-box filters for limiting features to the Tokyo metropolitan region.
-* **train-lines.js**:
-  * `lineNames(geojson)`: Groups features by company name and train line name.
-  * `joinSegments(segments)`: **Crucial Algorithm.** The raw GIS GeoJSON contains many disjointed segment lines for a single railway line. This function loops through all segments and matches coordinate endpoints to stitch them into continuous paths. It handles reversals (reversing coordinate arrays) if segments are oriented differently.
-* **train-line-svg.js**: Computes the bounding box of coordinates, maps latitude/longitude coordinates to SVG canvas space (reversing Y-axis since GIS Y increases upwards while SVG Y increases downwards), applies segment-level corrections, and outputs the `<svg>` path tags.
-* **tokyo-train-lines-data.js**: Standard lookup lists of Tokyo-centric train operating companies and their lines to filter nationwide data.
-* **train-line-corrections.json]**: Configuration to correct GIS anomalies (e.g., adding overlapping sections of `東北線` and `東海道線` into the `山手線` view, and setting coordinate bounding filters).
 
-### Routes & App Config (`src/`)
-* **[+page.svelte](file:///Users/liquidx/p/liquidx-japan-train-lines/src/routes/%2Bpage.svelte)**: Instantiates `<JapanTrainLines>` pointing to `/N02-19_RailroadSection.geojson`.
-* **[app.html](file:///Users/liquidx/p/liquidx-japan-train-lines/src/app.html)**: Global page HTML template.
+| File | Responsibility |
+|---|---|
+| `JapanTrainLines.svelte` | Root component. Manages pan/zoom state, touch gestures, station tooltips, keyboard shortcuts, and URL sync. Composes `LineSelector` and `MapAppearanceControls`. |
+| `LineSelector.svelte` | Sidebar panel listing regions, companies, and lines. Collapses on both mobile and desktop. Mobile uses an accordion; desktop uses a two-column layout. |
+| `MapAppearanceControls.svelte` | HUD overlay (bottom-right) with zoom buttons, theme toggle, and display option toggles. Includes a debug "Region polygon" toggle. |
+| `CompanyCell.svelte` | Button cell for a single railway company. |
+| `LineCell.svelte` | Button cell for a single train line with color dot. |
+| `ToggleOption.svelte` | Labelled toggle switch used inside `MapAppearanceControls`. |
+| `japan-train-lines.js` | `loadTrainLines` fetches all GeoJSON + the precomputed index, builds per-region GeoJSON caches, and stores them in module-level state. `drawTrainLine` renders the SVG for the selected region/company/line. |
+| `train-lines.js` | `lineNames` groups features by company/line. `joinSegments` stitches disjointed GIS segments into continuous paths. |
+| `train-line-svg.js` | Projects lat/lng → SVG coordinates, builds the SVG string. Also contains `escapeRegExp` for safe regex filtering. |
+| `regions.js` | Defines all geographic regions with `id`, `name`, `nameJa`, `bounds` (viewport rectangle), and `prefectures` (array of 2-digit ISO prefecture codes). **Single source of truth for region definitions.** |
+| `line-name-mapping.js` | Japanese→English name mappings for lines (`lineNameMapping`) and companies (`companyNameMapping`). |
+| `line-colors.js` | Maps company+line to hex colors for dark/light themes. |
+| `train-line-corrections.json` | Overrides per line: `includes` (extra segments to add) and `filters` (bounding-box clamps). Used to correct GIS anomalies e.g. stitching 東北線 into 山手線. |
+| `tokyo-train-lines-data.js` | Hardcoded allowlists for the special Tokyo region filter (company names + line names). |
 
-### Scripts & Tooling (`tools/` & `test/`)
-* **[tools/combine-svg-paths.js](file:///Users/liquidx/p/liquidx-japan-train-lines/tools/combine-svg-paths.js)**: Developer utility to parse and merge adjacent SVG `<path>` and `<polyline>` elements using `svgson`.
-* **[tools/export-svg.js](file:///Users/liquidx/p/liquidx-japan-train-lines/tools/export-svg.js)**: CLI tool to filter GeoJSON data and export a static SVG file for a specific line.
-* **[test/train-lines.test.mjs](file:///Users/liquidx/p/liquidx-japan-train-lines/test/train-lines.test.mjs)**: Unit tests (using Vitest) verifying the segment-joining and JSON line-parsing algorithms.
+### Routes (`src/routes/`)
+
+| File | Responsibility |
+|---|---|
+| `+page.svelte` | Dev harness. Instantiates `<JapanTrainLines>` pointing to the static GeoJSON files. |
+| `app.html` | Global HTML shell. |
+
+### Tools (`tools/`)
+
+| Script | Purpose |
+|---|---|
+| `build-prefecture-polygons.js` | Reads the high-res prefecture GeoJSON from `open-data-jp-prefectures-geojson`, simplifies each polygon with Douglas-Peucker (tolerance 0.01°), and writes `static/prefecture-polygons.json` (~326 KB). Used by the debug overlay. |
+| `build-line-region-index.js` | Reads `static/N02-19_RailroadSection.geojson` + `static/prefecture-polygons.json` + **`src/lib/regions.js` directly** (imported at runtime), and writes `static/line-region-index.json` (~16 KB) mapping `"company::line" → [regionId, ...]`. This is the precomputed index used at runtime for O(1) region filtering. |
+| `combine-svg-paths.js` | Utility to merge adjacent SVG `<path>`/`<polyline>` elements. |
+| `export-svg.js` | CLI to export a static SVG for a specific line. |
+| `get-data.sh` | Downloads the source GeoJSON from the Japanese Government GIS website. |
+
+### Tests (`test/`)
+
+* `train-lines.test.mjs` — Vitest unit tests for `joinSegments` and `lineNames`.
+
+### Generated Static Files (`static/`)
+
+These are committed outputs from the build tools and should be regenerated whenever the railroad GeoJSON or region definitions change:
+
+| File | Generated by | Used for |
+|---|---|---|
+| `N02-19_RailroadSection.geojson` | `pnpm run data` | Source railroad data |
+| `N02-19_Station.geojson` | `pnpm run data` | Station dot positions |
+| `japan-outline.geojson` | `pnpm run data` | Base map outline |
+| `prefecture-polygons.json` | `pnpm run build:prefectures` | Debug region polygon overlay |
+| `line-region-index.json` | `pnpm run build:index` | Runtime region filtering (O(1) lookup) |
 
 ---
 
-## 3. Data Flow & Rendering Details
+## 3. Svelte Version & Conventions
+
+All components are written in **Svelte 5 runes mode** (`<svelte:options runes={true} />`):
+
+- Props: `let { foo = $bindable(default), bar } = $props()`
+- State: `let x = $state(value)`
+- Derived: `let y = $derived(expr)`
+- Side effects: `$effect(() => { ... })`
+- DOM events: `onclick`, `onmousedown`, etc. (not `on:click`)
+- Component callbacks: passed as props (`onselectregion={fn}`) not dispatched events
+- Slots replaced with snippet props: `{@render children?.()}`
+
+---
+
+## 4. Data Flow
 
 ```mermaid
 graph TD
-    A[static/N02-19_RailroadSection.geojson] -->|fetch/load| B[loadTrainLines]
-    B -->|Group by Company/Line| C[getTrainCompanyNames]
-    B -->|Filter Tokyo Bounds| D[getTokyoGeoJson]
-    C -->|Populates Sidebar UI| E[JapanTrainLines.svelte]
-    E -->|Select Line| F[drawTrainLine]
-    F -->|Join Segment Coordinates| G[joinSegments in train-lines.js]
-    G -->|Scale & Render Paths| H[svg_from_segments in train-line-svg.js]
-    H -->|Inject HTML| I[#svg-viewer Element]
+    A[static/N02-19_RailroadSection.geojson] -->|fetch| B[loadTrainLines]
+    C[static/line-region-index.json] -->|fetch| B
+    B -->|filter by region index| D[_regionsGeoJson per region]
+    D -->|selected region| E[JapanTrainLines.svelte]
+    E -->|select company/line| F[drawTrainLine]
+    F -->|joinSegments| G[train-lines.js]
+    G -->|svg_from_segments| H[train-line-svg.js]
+    H -->|innerHTML| I[SVG viewer]
 ```
 
+### Region Filtering (how lines are assigned to regions)
+
+Region membership is **precomputed at build time**, not at runtime:
+
+1. `tools/build-prefecture-polygons.js` simplifies the official prefecture boundary GeoJSON.
+2. `tools/build-line-region-index.js` tests each railroad feature's coordinates against the simplified prefecture polygons (ray-casting), producing `line-region-index.json`.
+3. At runtime, `filterGeoJsonByRegion` does a single `.filter()` with a hash lookup — no polygon math.
+
+Region definitions live in `src/lib/regions.js`. Each region lists its prefecture ISO codes (`"01"`–`"47"`). The build script imports `regions.js` directly, so there is only one place to edit when adding or changing regions.
+
 ### Segment Joining Algorithm
-The `joinSegments(segments)` function works by:
-1. Extracting coordinates of the first segment and setting its start/end coordinates as `head` and `tail`.
-2. Greedily searching the remaining segments to find one that has a start or end matching current `head` or `tail`.
-3. If matched, it concatenates coordinates, handles reversals if needed, and updates `head`/`tail`.
-4. If no matching segments are left to join, the path is completed and added to paths list, and a new chain is started.
+
+`joinSegments` in `train-lines.js` stitches GIS segments (which are stored as disconnected pieces) into continuous polylines:
+1. Takes the first segment as the initial chain; records its `head` and `tail` endpoints.
+2. Greedily scans remaining segments for one whose start or end matches `head` or `tail`.
+3. Appends it (reversing coordinates if needed) and updates `head`/`tail`.
+4. When no match is found, saves the chain and starts a new one.
 
 ---
 
-## 4. Development Workflow
+## 5. Development Workflow
 
 ### Requirements
-* **Node.js**: Modern LTS version recommended.
-* **Package Manager**: `pnpm` is configured (lockfile is [pnpm-lock.yaml](file:///Users/liquidx/p/liquidx-japan-train-lines/pnpm-lock.yaml)).
 
-### Local Development
-To launch the Vite development server and view the UI:
+- **Node.js**: LTS version (20+)
+- **Package manager**: `pnpm`
+
+### Getting data
+
+Download the Japanese Government GIS railroad data into `static/`:
+```bash
+pnpm run data
+```
+
+### Regenerating precomputed static files
+
+Run this after changing `regions.js`, prefecture assignments, or replacing the railroad GeoJSON:
+```bash
+pnpm run build:static        # runs both steps below in sequence
+pnpm run build:prefectures   # → static/prefecture-polygons.json
+pnpm run build:index         # → static/line-region-index.json
+```
+
+### Local development
+
 ```bash
 pnpm install
 pnpm run dev
-# Server runs at http://localhost:5173/
+# http://localhost:5173/
 ```
 
-### Building & Packaging
-The Svelte component package is built using:
+### Building the package
+
 ```bash
-pnpm run build
+pnpm run build    # vite build + svelte-package + publint
 ```
-This builds Vite assets and then executes `npm run package` which syncs SvelteKit config, runs `svelte-package` (packaging `src/lib/` to `dist/`), and runs `publint` to check package entrypoints.
 
-### Packaging Configuration
-* The export entrypoint is configured in `package.json` under `exports`. It routes to `./dist/index.js` and typescript types to `./dist/index.d.ts`.
-* The package is published to **GitHub Packages** (`https://npm.pkg.github.com`).
-* Release tagging and creation is handled by `./publish.sh` using GitHub CLI (`gh`).
+### Running tests
+
+```bash
+pnpm test
+```
+
+### Publishing a release
+
+```bash
+pnpm run release  # tags and creates a GitHub release via ./publish.sh
+```
+
+The package is published to **GitHub Packages** (`https://npm.pkg.github.com`). The export entrypoint routes to `./dist/index.js`.
 
 ---
 
-## 5. Known Issues & Quirks for Agents
+## 6. Known Quirks
 
-1. **GeoJSON Filenames**:
-   The code in `src/routes/+page.svelte` points to `/N02-19_RailroadSection.geojson`. The files are saved inside the [static/](file:///Users/liquidx/p/liquidx-japan-train-lines/static) directory.
-2. **SVG Interactive Events**:
-   Hovering over rendered SVG segments sets their `stroke` to `red` and `stroke-width` to `4` via imperative vanilla JS event listeners attached in `drawTrainLine` (in `src/lib/japan-train-lines.js`).
+1. **GeoJSON filenames**: `+page.svelte` points to `/N02-19_RailroadSection.geojson`. Files live in `static/`.
+2. **Tokyo is a special region**: The Tokyo region uses `getTokyoGeoJson`, which applies an explicit company+line allowlist on top of a bounding-box filter, rather than the standard prefecture polygon approach. This is because Tokyo lines are tightly interleaved with lines from neighboring prefectures.
+3. **SVG is injected as innerHTML**: `drawTrainLine` sets `viewerEl.innerHTML` directly. Hover effects on segments are wired up imperatively with `addEventListener` after injection.
+4. **Region polygon debug tool**: Toggle "Region polygon" in Map Appearance controls to overlay the prefecture shapes for the active region. This fetches `prefecture-polygons.json` fresh each time.
+5. **Line name regex escaping**: Company and line names can contain regex special characters (e.g. parentheses). `escapeRegExp` in `train-line-svg.js` sanitises them before constructing `RegExp` objects.
