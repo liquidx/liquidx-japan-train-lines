@@ -1,12 +1,28 @@
 <svelte:options runes={true} />
 
 <script>
-  import { ChevronDown, ChevronUp } from "@lucide/svelte";
+  import {
+    ChevronDown,
+    ChevronUp,
+    Circle,
+    Eye,
+    EyeOff,
+    Map,
+    Minus,
+    Moon,
+    Palette,
+    Plus,
+    RotateCcw,
+    Scan,
+    SlidersHorizontal,
+    Sun,
+  } from "@lucide/svelte";
   import { companyNameMapping, lineNameMapping } from "$lib/line-name-mapping";
-  import CompanyCell from "$lib/CompanyCell.svelte";
   import LineCell from "$lib/LineCell.svelte";
+  import ToggleOption from "$lib/ToggleOption.svelte";
 
   let {
+    // Line selection
     regions = [],
     trainCompanyNames = [],
     selectedRegion = null,
@@ -16,9 +32,20 @@
     onselectcompany,
     onselectline,
     onselectfullregionmap,
+    // Map appearance (used in mobile panel, desktop delegates to MapAppearanceControls)
+    mapTheme = $bindable("dark"),
+    showLineColors = $bindable(true),
+    showBaseMapOutline = $bindable(true),
+    forceShowStations = $bindable(false),
+    stationSizeMultiplier = $bindable(1),
+    showRegionPolygon = $bindable(false),
+    onzoomIn,
+    onzoomOut,
+    onreset,
   } = $props();
 
-  let collapsed = $state(false);
+  let collapsed = $state(true);
+  let activePanel = $state("lines"); // "lines" | "appearance"
 
   const linePrimaryName = (line) => {
     if (lineNameMapping[line] && lineNameMapping[line].ja) {
@@ -39,211 +66,329 @@
   };
 </script>
 
-<section
-  id="controls-panel"
-  class="flex flex-col bg-panel-background z-5 transition-all duration-200
-    {collapsed ? 'h-12' : 'h-[45vh] md:h-128'}"
+<!-- Floating panel — bottom on mobile, top-left on desktop -->
+<div
+  class="hud-controls absolute z-10
+    bottom-3 left-3 right-3
+    md:bottom-auto md:top-5 md:left-5 md:right-auto md:w-72"
+  ontouchstart={(e) => e.stopPropagation()}
+  ontouchmove={(e) => e.stopPropagation()}
+  ontouchend={(e) => e.stopPropagation()}
+  onwheel={(e) => e.stopPropagation()}
 >
-  <!-- Toggle bar -->
   <div
-    class="shrink-0 flex items-center justify-between px-4 h-12 border-b border-border cursor-pointer"
-    onclick={() => (collapsed = !collapsed)}
-    onkeydown={(e) => e.key === "Enter" && (collapsed = !collapsed)}
-    role="button"
-    tabindex="0"
-    aria-expanded={!collapsed}
+    class="bg-panel-background backdrop-blur-md rounded-xl border border-border shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200 flex flex-col
+      {collapsed ? '' : 'max-h-[70vh] md:max-h-[80vh]'}"
   >
-    <div class="flex items-center gap-2 min-w-0 overflow-hidden text-sm">
-      {#if selectedCompany}
-        <span class="text-accent-secondary font-medium truncate"
-          >{companyPrimaryName(selectedCompany)}</span
-        >
-        {#if selectedLine}
-          <span class="text-muted shrink-0">→</span>
-          <span class="text-secondary truncate"
-            >{linePrimaryName(selectedLine)}</span
-          >
-        {/if}
-      {:else}
-        <span class="text-muted">
-          {regions.find((r) => r.id === selectedRegion)?.nameJa || "路線を選択"}
-        </span>
-      {/if}
-    </div>
-    {#if collapsed}
-      <ChevronUp size={16} class="text-muted shrink-0 ml-2" />
-    {:else}
-      <ChevronDown size={16} class="text-muted shrink-0 ml-2" />
-    {/if}
-  </div>
-
-  <!-- Panel content (hidden when collapsed) -->
-  <div class="{collapsed ? 'hidden' : 'flex'} flex-col flex-1 overflow-hidden">
-    <!-- Region Selector Tabs -->
+    <!-- Header bar (always visible) -->
     <div
-      class="flex bg-panel-background border-b border-border px-1 gap-1.5 py-1 items-center overflow-x-auto scrollbar-thin shrink-0"
+      class="w-full h-10 flex items-center bg-[var(--color-surface-soft)] shrink-0"
     >
-      {#each regions as r (r.id)}
-        <button
-          class="flex items-center px-2 py-1 min-w-16 rounded-lg border cursor-pointer whitespace-nowrap transition-all duration-200 {selectedRegion ===
-          r.id
-            ? 'border-border text-accent-primary'
-            : 'bg-transparent border-transparent text-muted hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]'}"
-          onclick={() => onselectregion?.(r.id)}
+      <!-- Collapse / expand toggle -->
+      <button
+        class="flex items-center gap-2 px-3 flex-1 h-full min-w-0 cursor-pointer transition-colors duration-200 hover:bg-[var(--color-surface-hover)]"
+        onclick={() => (collapsed = !collapsed)}
+        aria-expanded={!collapsed}
+      >
+        <Map
+          size={15}
+          strokeWidth={2.3}
+          class="text-[var(--color-accent-primary)] shrink-0"
+        />
+        <span
+          class="flex-1 min-w-0 text-left flex items-center gap-1.5 overflow-hidden"
         >
-          <div
-            class="flex flex-col items-start leading-[1.1] {selectedRegion ===
-            r.id
-              ? 'text-accent-primary'
-              : 'text-secondary'}"
-          >
-            <span class="text-sm font-medium">{r.nameJa}</span>
-            <span class="text-xxs">{r.name}</span>
-          </div>
+          {#if selectedCompany}
+            <span
+              class="text-[11px] font-medium text-accent-secondary truncate"
+              >{companyPrimaryName(selectedCompany)}</span
+            >
+            {#if selectedLine}
+              <span class="text-muted text-[10px] shrink-0">→</span>
+              <span class="text-[11px] text-secondary truncate"
+                >{linePrimaryName(selectedLine)}</span
+              >
+            {/if}
+          {:else}
+            <span
+              class="text-[11px] font-medium uppercase tracking-[0.6px] text-[var(--color-text-secondary)]"
+            >
+              {regions.find((r) => r.id === selectedRegion)?.nameJa ||
+                "路線を選択"}
+            </span>
+          {/if}
+        </span>
+        <ChevronDown
+          size={13}
+          strokeWidth={2.5}
+          class="text-muted transition-transform duration-200 shrink-0 {collapsed
+            ? ''
+            : 'rotate-180'}"
+        />
+      </button>
+
+      <!-- Zoom buttons — always visible in header -->
+      <div
+        class="flex items-center gap-0.5 pr-1.5 pl-1 border-l border-border h-7"
+      >
+        <button
+          onclick={(e) => { e.stopPropagation(); onzoomIn?.(); }}
+          title="Zoom In"
+          aria-label="Zoom In"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <Plus size={14} strokeWidth={2.5} />
         </button>
-      {/each}
+        <button
+          onclick={(e) => { e.stopPropagation(); onzoomOut?.(); }}
+          title="Zoom Out"
+          aria-label="Zoom Out"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <Minus size={14} strokeWidth={2.5} />
+        </button>
+        <button
+          onclick={(e) => { e.stopPropagation(); onreset?.(); }}
+          title="Reset View"
+          aria-label="Reset View"
+          class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
+        >
+          <RotateCcw size={13} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
 
-    <!-- Desktop: two-column layout -->
-    <div class="hidden md:flex flex-1 overflow-hidden">
-      <!-- Left Column: Operating Companies -->
+    {#if !collapsed}
+      <!-- Tab switcher -->
       <div
-        class="flex flex-col h-full w-72 border-r border-border bg-[var(--color-panel-muted)]"
+        class="flex shrink-0 border-b border-border bg-[var(--color-panel-muted)]"
       >
-        <div class="flex-1 overflow-y-auto p-3 scrollbar-thin">
+        <button
+          class="flex-1 h-8 flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-colors duration-200
+            {activePanel === 'lines'
+            ? 'text-accent-primary border-b-2 border-[var(--color-accent-primary)]'
+            : 'text-muted hover:text-secondary'}"
+          onclick={() => (activePanel = "lines")}
+        >
+          <Map size={12} strokeWidth={2.3} />
+          Lines
+        </button>
+        <button
+          class="flex-1 h-8 flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-colors duration-200
+            {activePanel === 'appearance'
+            ? 'text-accent-primary border-b-2 border-[var(--color-accent-primary)]'
+            : 'text-muted hover:text-secondary'}"
+          onclick={() => (activePanel = "appearance")}
+        >
+          <SlidersHorizontal size={12} strokeWidth={2.3} />
+          Appearance
+        </button>
+      </div>
+
+      <!-- Lines panel -->
+      <div
+        class="{activePanel === 'lines' ? 'flex' : 'hidden'} flex-col flex-1 overflow-hidden"
+      >
+        <!-- Scrollable accordion (regions + companies) -->
+        <div class="flex-1 overflow-y-auto scrollbar-thin">
+          <!-- Region grid -->
+          <div class="grid grid-cols-2 gap-1 p-2 border-b border-border">
+            {#each regions as r (r.id)}
+              <button
+                class="flex flex-col items-start px-2.5 py-1.5 rounded-lg cursor-pointer transition-all duration-200 text-left
+                  {selectedRegion === r.id
+                  ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+                  : 'text-muted hover:bg-[var(--color-surface-hover)] hover:text-secondary'}"
+                onclick={() => onselectregion?.(r.id)}
+              >
+                <span class="text-xs font-medium leading-tight {selectedRegion === r.id ? 'text-accent-primary' : ''}">{r.nameJa}</span>
+                <span class="text-xxs text-muted leading-tight">{r.name}</span>
+              </button>
+            {/each}
+          </div>
           <button
-            class="w-full text-muted cursor-pointer text-left transition-all duration-200 p-2 rounded-lg mb-1.5 hover:bg-selected-background {selectedCompany ===
-              null && selectedLine === null
-              ? 'bg-selected-background text-accent-primary'
-              : 'bg-transparent'}"
+            class="w-full text-left px-4 py-2.5 border-b border-border transition-colors duration-150
+              {selectedCompany === null && selectedLine === null
+              ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+              : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
             onclick={() => onselectfullregionmap?.()}
           >
-            <div class="flex flex-col">
-              <span class="text-sm text-secondary">
-                {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
-              </span>
-              <span
-                class="text-xxs text-secondary transition-colors {selectedCompany ===
-                  null && selectedLine === null
-                  ? 'text-accent-primary'
-                  : 'text-secondary'}">All</span
-              >
-            </div>
+            <span class="text-sm font-medium">
+              {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
+            </span>
+            <span class="text-xxs text-muted ml-2">All regional lines</span>
           </button>
 
           {#each trainCompanyNames as company (company.company)}
-            <CompanyCell
-              {company}
-              selected={selectedCompany === company.company}
-              onclick={() => onselectcompany?.(company.company)}
-            />
+            <div class="border-b border-border">
+              <button
+                class="w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors duration-150
+                  {selectedCompany === company.company
+                  ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+                  : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
+                onclick={() => onselectcompany?.(company.company)}
+              >
+                <span class="flex flex-col min-w-0 truncate">
+                  <span class="text-sm font-medium truncate"
+                    >{companyPrimaryName(company.company)}</span
+                  >
+                  {#if companyEnglishName(company.company)}
+                    <span class="text-xxs text-muted truncate"
+                      >{companyEnglishName(company.company)}</span
+                    >
+                  {/if}
+                </span>
+                <span class="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span class="text-xxs text-muted">{company.lines.length}</span
+                  >
+                  {#if selectedCompany === company.company}
+                    <ChevronUp size={14} class="text-muted" />
+                  {:else}
+                    <ChevronDown size={14} class="text-muted" />
+                  {/if}
+                </span>
+              </button>
+
+              {#if selectedCompany === company.company}
+                <div
+                  class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5"
+                >
+                  {#each company.lines as line (line)}
+                    <LineCell
+                      {line}
+                      company={selectedCompany}
+                      selected={selectedLine === line}
+                      onclick={() =>
+                        onselectline?.({ company: selectedCompany, line })}
+                    />
+                  {/each}
+                </div>
+              {/if}
+            </div>
           {/each}
         </div>
       </div>
 
-      <!-- Right Column: Train Lines Grid -->
-      <div class="flex flex-col h-full flex-1 bg-[var(--color-surface-soft)]">
-        <div class="flex-1 overflow-y-auto p-3 scrollbar-thin">
-          {#if selectedCompany}
-            <div
-              class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 w-full"
+      <!-- Appearance panel -->
+      <div
+        class="{activePanel === 'appearance' ? 'flex' : 'hidden'} flex-col flex-1 overflow-y-auto scrollbar-thin"
+      >
+        <div class="p-2">
+          <!-- Theme toggle -->
+          <div
+            class="grid grid-cols-2 gap-1 mb-1 rounded-lg bg-[var(--color-surface-soft)] p-1 border border-border"
+          >
+            <button
+              class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-all duration-200 {mapTheme ===
+              'dark'
+                ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
+                : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
+              onclick={() => (mapTheme = "dark")}
+              aria-pressed={mapTheme === "dark"}
             >
-              {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line (line)}
-                <LineCell
-                  {line}
-                  company={selectedCompany}
-                  selected={selectedLine === line}
-                  onclick={() => onselectline?.({ company: selectedCompany, line })}
-                />
-              {/each}
-            </div>
-          {:else}
-            <div
-              class="flex items-center justify-center h-full min-h-[200px] text-center text-muted"
+              <Moon size={14} strokeWidth={2.2} />
+              Dark
+            </button>
+            <button
+              class="h-8 rounded-md border border-transparent flex items-center justify-center gap-1.5 text-[11px] font-medium cursor-pointer transition-all duration-200 {mapTheme ===
+              'light'
+                ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
+                : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
+              onclick={() => (mapTheme = "light")}
+              aria-pressed={mapTheme === "light"}
             >
-              <div class="max-w-[380px]">
-                <span class="text-[32px] block mb-3 opacity-50">🗺️</span>
-                <h3 class="text-muted text-[16px] font-medium m-[0_0_6px_0]">
-                  No Company Selected
-                </h3>
-                <p class="text-xs leading-relaxed m-0">
-                  Choose a railway operating company from the left panel to
-                  browse and visualize individual train lines, or view the
-                  complete metropolitan map.
-                </p>
-              </div>
+              <Sun size={14} strokeWidth={2.2} />
+              Light
+            </button>
+          </div>
+
+          <ToggleOption
+            bind:checked={showLineColors}
+            label="Line colors"
+            description=""
+            color="var(--color-accent-primary)"
+          >
+            <Palette
+              size={16}
+              strokeWidth={2.2}
+              class={showLineColors ? "text-primary" : "text-muted"}
+            />
+          </ToggleOption>
+
+          <ToggleOption
+            bind:checked={showBaseMapOutline}
+            label="Base map outline"
+            description=""
+            color="var(--color-accent-tertiary)"
+          >
+            {#if showBaseMapOutline}
+              <Eye
+                size={16}
+                strokeWidth={2.2}
+                class="text-[var(--color-accent-tertiary)]"
+              />
+            {:else}
+              <EyeOff size={16} strokeWidth={2.2} class="text-muted" />
+            {/if}
+          </ToggleOption>
+
+          <ToggleOption
+            bind:checked={forceShowStations}
+            label="Stations"
+            description=""
+            color="var(--color-accent-secondary)"
+          >
+            <Circle
+              size={16}
+              strokeWidth={2.2}
+              class={forceShowStations
+                ? "text-[var(--color-accent-secondary)]"
+                : "text-muted"}
+            />
+          </ToggleOption>
+
+          <div class="px-2.5 py-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <span
+                class="text-xs font-medium text-[var(--color-text-secondary)]"
+                >Station size</span
+              >
+              <span class="text-[10px] text-muted tabular-nums"
+                >{stationSizeMultiplier.toFixed(1)}×</span
+              >
             </div>
-          {/if}
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              bind:value={stationSizeMultiplier}
+              class="w-full h-1 rounded-full appearance-none cursor-pointer bg-[var(--color-switch-off)] accent-[var(--color-accent-secondary)]"
+            />
+            <div class="flex justify-between mt-1">
+              <span class="text-[9px] text-muted">0.5×</span>
+              <span class="text-[9px] text-muted">3×</span>
+            </div>
+          </div>
+
+          <div class="border-t border-border mt-1 pt-1">
+            <ToggleOption
+              bind:checked={showRegionPolygon}
+              label="Region polygon"
+              description="Debug"
+              color="var(--color-accent-secondary)"
+            >
+              <Scan
+                size={16}
+                strokeWidth={2.2}
+                class={showRegionPolygon
+                  ? "text-[var(--color-accent-secondary)]"
+                  : "text-muted"}
+              />
+            </ToggleOption>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Mobile: accordion list navigation -->
-    <div class="flex md:hidden flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-y-auto scrollbar-thin">
-        <!-- All lines entry -->
-        <button
-          class="w-full text-left px-4 py-2.5 border-b border-border transition-colors duration-150
-            {selectedCompany === null && selectedLine === null
-            ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
-            : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
-          onclick={() => onselectfullregionmap?.()}
-        >
-          <span class="text-sm font-medium">
-            {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
-          </span>
-          <span class="text-xxs text-muted ml-2">All regional lines</span>
-        </button>
-
-        <!-- Company accordion rows -->
-        {#each trainCompanyNames as company (company.company)}
-          <div class="border-b border-border">
-            <!-- Company row -->
-            <button
-              class="w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors duration-150
-                {selectedCompany === company.company
-                ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
-                : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
-              onclick={() => onselectcompany?.(company.company)}
-            >
-              <span class="flex flex-col min-w-0 truncate">
-                <span class="text-sm font-medium truncate"
-                  >{companyPrimaryName(company.company)}</span
-                >
-                {#if companyEnglishName(company.company)}
-                  <span class="text-xxs text-muted truncate"
-                    >{companyEnglishName(company.company)}</span
-                  >
-                {/if}
-              </span>
-              <span class="flex items-center gap-1.5 shrink-0 ml-2">
-                <span class="text-xxs text-muted">{company.lines.length}</span>
-                {#if selectedCompany === company.company}
-                  <ChevronUp size={14} class="text-muted" />
-                {:else}
-                  <ChevronDown size={14} class="text-muted" />
-                {/if}
-              </span>
-            </button>
-
-            <!-- Expanded lines -->
-            {#if selectedCompany === company.company}
-              <div
-                class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5"
-              >
-                {#each company.lines as line (line)}
-                  <LineCell
-                    {line}
-                    company={selectedCompany}
-                    selected={selectedLine === line}
-                    onclick={() => onselectline?.({ company: selectedCompany, line })}
-                  />
-                {/each}
-              </div>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </div>
+    {/if}
   </div>
-</section>
+</div>

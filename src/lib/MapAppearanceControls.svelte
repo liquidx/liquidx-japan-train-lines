@@ -33,7 +33,12 @@
 </script>
 
 <!-- Map Appearance Panel (bottom-right, collapsible) with zoom controls in header -->
-<div class="hud-controls absolute bottom-5 right-5 z-10 max-w-84">
+<div
+  class="hud-controls absolute bottom-5 right-5 z-10 max-w-84 hidden md:block"
+  ontouchstart={(e) => e.stopPropagation()}
+  ontouchmove={(e) => e.stopPropagation()}
+  ontouchend={(e) => e.stopPropagation()}
+>
   <div
     class="bg-panel-background backdrop-blur-md rounded-xl border border-border shadow-[var(--shadow-panel)] overflow-hidden transition-colors duration-200"
   >

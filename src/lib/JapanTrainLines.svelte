@@ -5,7 +5,6 @@
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
   import { stationNameMapping } from "$lib/line-name-mapping.js";
   import { regions as allRegions } from "$lib/regions.js";
-  import MapControls from "$lib/MapAppearanceControls.svelte";
   import LineSelector from "$lib/LineSelector.svelte";
 
   let {
@@ -21,7 +20,7 @@
   let regions = $state([]);
   let regionDataMap = {};
   let trainCompanyNames = $state([]);
-  let selectedRegion = $state("kanto");
+  let selectedRegion = $state("tokyo");
   let selectedCompany = $state(null);
   let selectedLine = $state(null);
   let urlSyncReady = $state(false);
@@ -56,6 +55,7 @@
   let initialPinchMapY = 0;
   let initialPinchSvgX = 0;
   let initialPinchSvgY = 0;
+
   const lineStrokeWidth = 2;
   const minStationRadius = lineStrokeWidth * 0.1;
   const maxStationRadius = lineStrokeWidth * 1.5;
@@ -143,6 +143,11 @@
     if (urlCompany) selectedCompany = urlCompany;
     if (urlLine) selectedLine = urlLine;
 
+    // Apply the initial view for the starting region (unless a company/line is pre-selected from URL)
+    if (!selectedCompany && !selectedLine) {
+      regionViewPending = selectedRegion;
+    }
+
     urlSyncReady = true;
     registerKeyboardShortcuts();
   });
@@ -172,6 +177,13 @@
         640,
         { showLineColors, showBaseMapOutline, mapTheme, padding: mapPadding },
       );
+      // Apply the region's initialView once after a region change (non-reactive
+      // flag so reading it here doesn't add it as an effect dependency).
+      const pending = regionViewPending;
+      if (pending) {
+        regionViewPending = null;
+        applyRegionInitialView(pending, mapInfo);
+      }
     }
   });
 
@@ -185,7 +197,9 @@
   // Draw or remove the debug region polygon overlay (one path per prefecture)
   $effect(() => {
     const mapLayer = viewerEl?.querySelector("[data-map-layer]");
-    mapLayer?.querySelectorAll(".debug-region-polygon").forEach((el) => el.remove());
+    mapLayer
+      ?.querySelectorAll(".debug-region-polygon")
+      .forEach((el) => el.remove());
     if (!showRegionPolygon || !mapInfo || !mapLayer) return;
 
     const region = allRegions.find((r) => r.id === selectedRegion);
@@ -194,13 +208,19 @@
     const { bounds, svgWidth, svgHeight } = mapInfo;
 
     const project = ([lng, lat]) => {
-      const x = ((lng - bounds.min_x) / (bounds.max_x - bounds.min_x)) * svgWidth;
-      const y = svgHeight - ((lat - bounds.min_y) / (bounds.max_y - bounds.min_y)) * svgHeight;
+      const x =
+        ((lng - bounds.min_x) / (bounds.max_x - bounds.min_x)) * svgWidth;
+      const y =
+        svgHeight -
+        ((lat - bounds.min_y) / (bounds.max_y - bounds.min_y)) * svgHeight;
       return `${x},${y}`;
     };
 
     const renderRing = (ring) => {
-      const el = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      const el = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "polygon",
+      );
       el.setAttribute("class", "debug-region-polygon");
       el.setAttribute("points", ring.map(project).join(" "));
       el.setAttribute("fill", "rgba(255,80,80,0.06)");
@@ -230,6 +250,33 @@
     zoom = 1;
     panX = 0;
     panY = 0;
+  };
+
+  // Plain (non-reactive) flag: set before selectedRegion changes so the
+  // drawing effect can apply the region's initialView once after redraw.
+  let regionViewPending = null;
+
+  const applyRegionInitialView = (regionId, info) => {
+    const region = allRegions.find((r) => r.id === regionId);
+    if (region?.initialView && info) {
+      const { center, zoom: targetZoom } = region.initialView;
+      // Project lat/lng to SVG user units (same formula as train-line-svg.js)
+      const mx =
+        ((center.lng - info.bounds.min_x) /
+          (info.bounds.max_x - info.bounds.min_x)) *
+        info.svgWidth;
+      const my =
+        info.svgHeight -
+        ((center.lat - info.bounds.min_y) /
+          (info.bounds.max_y - info.bounds.min_y)) *
+          info.svgHeight;
+      // SVG is CSS-centered, so viewport center = (svgWidth/2, svgHeight/2)
+      zoom = targetZoom;
+      panX = info.svgWidth / 2 - mx * targetZoom;
+      panY = info.svgHeight / 2 - my * targetZoom;
+    } else {
+      handleReset();
+    }
   };
 
   const zoomToPoint = (point, factor) => {
@@ -340,19 +387,6 @@
       lastTapX = touch.clientX;
       lastTapY = touch.clientY;
 
-      if (touch.target.classList.contains("station-dot")) {
-        const containerRect = svgViewerEl.getBoundingClientRect();
-        const name = touch.target.getAttribute("data-station-name");
-        hoveredStation = {
-          name,
-          nameEn: stationNameMapping[name] ?? null,
-          lineName: touch.target.getAttribute("data-line-name"),
-          x: touch.clientX - containerRect.left,
-          y: touch.clientY - containerRect.top,
-        };
-        return;
-      }
-
       hoveredStation = null;
       const point = clientPointToSvgPoint(touch.clientX, touch.clientY);
       isDragging = true;
@@ -362,6 +396,7 @@
       initPanY = panY;
     } else if (e.touches.length === 2) {
       isDragging = false;
+      hoveredStation = null;
       const [t1, t2] = [e.touches[0], e.touches[1]];
       initialPinchDistance = getTouchDistance(t1, t2);
       initialPinchZoom = zoom;
@@ -402,11 +437,12 @@
   };
 
   const selectRegion = (regionId) => {
+    regionViewPending = regionId;
     selectedRegion = regionId;
     trainCompanyNames = regionDataMap[selectedRegion] || [];
     selectedCompany = null;
     selectedLine = null;
-    handleReset();
+    handleReset(); // reset immediately; applyRegionInitialView overrides after redraw
   };
 
   const selectLine = (company, line) => {
@@ -507,7 +543,7 @@
     ontouchstart={handleTouchStart}
     ontouchmove={handleTouchMove}
     ontouchend={handleTouchEnd}
-    class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-border transition-colors duration-200"
+    class="map-viewport flex-1 relative overflow-hidden select-none touch-none transition-colors duration-200"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
     <div
@@ -518,7 +554,16 @@
     ></div>
 
     <!-- HUD Overlay Controls -->
-    <MapControls
+    <LineSelector
+      {regions}
+      {trainCompanyNames}
+      {selectedRegion}
+      {selectedCompany}
+      {selectedLine}
+      onselectregion={selectRegion}
+      onselectcompany={selectCompany}
+      onselectline={(d) => selectLine(d.company, d.line)}
+      onselectfullregionmap={selectFullRegionMap}
       bind:mapTheme
       bind:showLineColors
       bind:showBaseMapOutline
@@ -548,17 +593,4 @@
       </div>
     {/if}
   </div>
-
-  <!-- Controls Panel -->
-  <LineSelector
-    {regions}
-    {trainCompanyNames}
-    {selectedRegion}
-    {selectedCompany}
-    {selectedLine}
-    onselectregion={selectRegion}
-    onselectcompany={selectCompany}
-    onselectline={(d) => selectLine(d.company, d.line)}
-    onselectfullregionmap={selectFullRegionMap}
-  />
 </div>
