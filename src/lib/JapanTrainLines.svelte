@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
   import { stationNameMapping } from "$lib/line-name-mapping.js";
+  import { regions as allRegions } from "$lib/regions.js";
   import MapControls from "$lib/MapAppearanceControls.svelte";
   import LineSelector from "$lib/LineSelector.svelte";
 
@@ -29,6 +30,7 @@
   let forceShowStations = $state(false);
   let stationSizeMultiplier = $state(1);
   let mapTheme = $state("dark");
+  let showRegionPolygon = $state(false);
   let mapInfo = $state(null);
 
   // Pan & Zoom State
@@ -178,6 +180,50 @@
     // Explicitly track all dependencies that affect the transform
     void [zoom, panX, panY, forceShowStations, stationSizeMultiplier, mapInfo];
     if (viewerEl) applyMapTransform();
+  });
+
+  // Draw or remove the debug region polygon overlay (one path per prefecture)
+  $effect(() => {
+    const mapLayer = viewerEl?.querySelector("[data-map-layer]");
+    mapLayer?.querySelectorAll(".debug-region-polygon").forEach((el) => el.remove());
+    if (!showRegionPolygon || !mapInfo || !mapLayer) return;
+
+    const region = allRegions.find((r) => r.id === selectedRegion);
+    if (!region?.prefectures) return;
+
+    const { bounds, svgWidth, svgHeight } = mapInfo;
+
+    const project = ([lng, lat]) => {
+      const x = ((lng - bounds.min_x) / (bounds.max_x - bounds.min_x)) * svgWidth;
+      const y = svgHeight - ((lat - bounds.min_y) / (bounds.max_y - bounds.min_y)) * svgHeight;
+      return `${x},${y}`;
+    };
+
+    const renderRing = (ring) => {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      el.setAttribute("class", "debug-region-polygon");
+      el.setAttribute("points", ring.map(project).join(" "));
+      el.setAttribute("fill", "rgba(255,80,80,0.06)");
+      el.setAttribute("stroke", "rgba(255,80,80,0.8)");
+      el.setAttribute("stroke-width", "2");
+      el.setAttribute("stroke-dasharray", "10 5");
+      el.setAttribute("vector-effect", "non-scaling-stroke");
+      mapLayer.appendChild(el);
+    };
+
+    fetch("/prefecture-polygons.json")
+      .then((r) => r.json())
+      .then((prefPolygons) => {
+        for (const code of region.prefectures) {
+          const geom = prefPolygons[code];
+          if (!geom) continue;
+          if (geom.type === "Polygon") {
+            renderRing(geom.coordinates[0]);
+          } else if (geom.type === "MultiPolygon") {
+            geom.coordinates.forEach((poly) => renderRing(poly[0]));
+          }
+        }
+      });
   });
 
   const handleReset = () => {
@@ -478,6 +524,7 @@
       bind:showBaseMapOutline
       bind:forceShowStations
       bind:stationSizeMultiplier
+      bind:showRegionPolygon
       onzoomIn={zoomIn}
       onzoomOut={zoomOut}
       onreset={handleReset}

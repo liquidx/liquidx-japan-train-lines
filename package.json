@@ -12,7 +12,10 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "test": "vitest run",
     "release": "./publish.sh",
-    "data": "bash tools/get-data.sh"
+    "data": "bash tools/get-data.sh",
+    "build:prefectures": "node tools/build-prefecture-polygons.js",
+    "build:index": "node tools/build-line-region-index.js",
+    "build:static": "pnpm run build:prefectures && pnpm run build:index"
   },
   "exports": {
     ".": {
@@ -47,6 +50,7 @@
   "type": "module",
   "dependencies": {
     "lodash-es": "^4.17.21",
+    "open-data-jp-prefectures-geojson": "^1.1.0",
     "svgson": "^5.3.1"
   },
   "publishConfig": {

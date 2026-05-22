@@ -83,6 +83,8 @@ const getTrainCompanyNames = (train_lines) => {
   return lines;
 };
 
+// --- Coordinate containment (used only for Tokyo special-case filtering) ---
+
 const isCoordinateInBounds = (coord, bounds) => {
   return (
     coord &&
@@ -108,6 +110,9 @@ const hasCoordinateInBounds = (geometry, bounds) => {
   }
   return false;
 };
+
+// _lineRegionIndex: "company::line" → string[] of region IDs, precomputed at build time.
+let _lineRegionIndex = null;
 
 export const getTokyoGeoJson = (geojson, railroadGeojson) => {
   const matchingLines = new Set();
@@ -138,27 +143,16 @@ export const getTokyoGeoJson = (geojson, railroadGeojson) => {
   return { features };
 };
 
-export const filterGeoJsonByBounds = (geojson, bounds, railroadGeojson) => {
-  const matchingLines = new Set();
-  const sourceGeojson = railroadGeojson || geojson;
-
-  for (const feature of sourceGeojson.features) {
-    const line_name = feature.properties?.["路線名"];
-    const company_name = feature.properties?.["運営会社"];
-    if (!line_name || !company_name) continue;
-
-    if (hasCoordinateInBounds(feature.geometry, bounds)) {
-      matchingLines.add(`${company_name}::${line_name}`);
-    }
-  }
-
-  const features = geojson.features.filter(feature => {
-    const line_name = feature.properties?.["路線名"];
-    const company_name = feature.properties?.["運営会社"];
-    return matchingLines.has(`${company_name}::${line_name}`);
-  });
-
-  return { features };
+export const filterGeoJsonByRegion = (geojson, region) => {
+  return {
+    features: geojson.features.filter(feature => {
+      const line = feature.properties?.["路線名"];
+      const company = feature.properties?.["運営会社"];
+      if (!line || !company) return false;
+      const key = `${company}::${line}`;
+      return _lineRegionIndex?.[key]?.includes(region.id) ?? false;
+    }),
+  };
 };
 
 export const loadTrainLines = async ({ railroadGeoJsonUrl, stationGeoJsonUrl = null, japanOutlineGeoJsonUrl = null }) => {
@@ -170,11 +164,13 @@ export const loadTrainLines = async ({ railroadGeoJsonUrl, stationGeoJsonUrl = n
     japanOutlineGeoJsonUrl
       ? fetch(japanOutlineGeoJsonUrl).then((response) => response.json())
       : Promise.resolve(null),
+    fetch("/line-region-index.json").then((r) => r.json()),
   ])
-    .then(([json, stationJson, japanOutlineJson]) => {
+    .then(([json, stationJson, japanOutlineJson, lineRegionIndex]) => {
       _trainLines = json;
       _stationGeoJson = stationJson;
       _japanOutlineGeoJson = japanOutlineJson;
+      _lineRegionIndex = lineRegionIndex;
 
       // Cache GeoJSON slice for each region
       _regionsGeoJson["japan"] = json;
@@ -188,9 +184,9 @@ export const loadTrainLines = async ({ railroadGeoJsonUrl, stationGeoJsonUrl = n
 
       for (const r of regions) {
         if (r.id !== "japan" && r.id !== "tokyo") {
-          _regionsGeoJson[r.id] = filterGeoJsonByBounds(json, r.bounds);
+          _regionsGeoJson[r.id] = filterGeoJsonByRegion(json, r);
           if (stationJson) {
-            _regionsStationGeoJson[r.id] = filterGeoJsonByBounds(stationJson, r.bounds, json);
+            _regionsStationGeoJson[r.id] = filterGeoJsonByRegion(stationJson, r);
           }
         }
       }

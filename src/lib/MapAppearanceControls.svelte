@@ -13,6 +13,7 @@
     RotateCcw,
     SlidersHorizontal,
     Sun,
+    Scan,
   } from "@lucide/svelte";
   import ToggleOption from "$lib/ToggleOption.svelte";
 
@@ -22,6 +23,7 @@
     showBaseMapOutline = $bindable(true),
     forceShowStations = $bindable(false),
     stationSizeMultiplier = $bindable(1),
+    showRegionPolygon = $bindable(false),
     onzoomIn,
     onzoomOut,
     onreset,
@@ -186,6 +188,21 @@
             <span class="text-[9px] text-muted">0.5×</span>
             <span class="text-[9px] text-muted">3×</span>
           </div>
+        </div>
+
+        <div class="border-t border-border mt-1 pt-1">
+          <ToggleOption
+            bind:checked={showRegionPolygon}
+            label="Region polygon"
+            description="Debug"
+            color="var(--color-accent-secondary)"
+          >
+            <Scan
+              size={16}
+              strokeWidth={2.2}
+              class={showRegionPolygon ? "text-[var(--color-accent-secondary)]" : "text-muted"}
+            />
+          </ToggleOption>
         </div>
       </div>
     {/if}

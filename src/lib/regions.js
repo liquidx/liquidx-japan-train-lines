@@ -1,11 +1,68 @@
+// Prefecture codes (2-digit ISO) per region, used together with
+// static/prefecture-polygons.json for accurate containment testing.
+// Bounds are the enclosing rectangle used for the SVG viewport.
+// Order: All Japan first, then regions northeast → southwest.
 export const regions = [
-  { id: "tokyo", name: "Tokyo", nameJa: "東京", bounds: { min_lng: 138.9114, max_lng: 139.9305, min_lat: 35.498, max_lat: 35.916 } },
-  { id: "kanto", name: "Kanto", nameJa: "関東", bounds: { min_lng: 138.3, max_lng: 141.0, min_lat: 34.8, max_lat: 37.2 } },
-  { id: "kansai", name: "Kansai", nameJa: "関西", bounds: { min_lng: 131.101, max_lng: 136.2, min_lat: 33.8405, max_lat: 35.4 } },
-  { id: "chubu", name: "Chubu", nameJa: "中部", bounds: { min_lng: 136.2, max_lng: 137.6, min_lat: 34.6, max_lat: 35.6 } },
-  { id: "shikoku", name: "Shikoku", nameJa: "四国", bounds: { min_lng: 132.173, max_lng: 134.551, min_lat: 32.5886, max_lat: 34.387 } },
-  { id: "tohoku", name: "Tohoku", nameJa: "東北", bounds: { min_lng: 140.3, max_lng: 141.5, min_lat: 37.57, max_lat: 41.320 } },
-  { id: "kyushu", name: "Kyushu", nameJa: "九州", bounds: { min_lng: 129.0, max_lng: 131.2, min_lat: 27.8, max_lat: 34.2 } },
-  { id: "hokkaido", name: "Hokkaido", nameJa: "北海道", bounds: { min_lng: 139.813, max_lng: 145.882, min_lat: 41.320, max_lat: 45.8334 } },
-  { id: "japan", name: "All Japan", nameJa: "全国" }
+  { id: "japan", name: "All Japan", nameJa: "全国" },
+  {
+    id: "hokkaido",
+    name: "Hokkaido",
+    nameJa: "北海道",
+    bounds: { min_lng: 139.30, max_lng: 145.90, min_lat: 41.30, max_lat: 45.60 },
+    prefectures: ["01"],
+  },
+  {
+    id: "tohoku",
+    name: "Tohoku",
+    nameJa: "東北",
+    prefectures: ["02", "03", "04", "05", "06", "07"], // Aomori Iwate Miyagi Akita Yamagata Fukushima
+  },
+  {
+    id: "kanto",
+    name: "Kanto",
+    nameJa: "関東",
+    prefectures: ["08", "09", "10", "11", "12", "13", "14"], // Ibaraki Tochigi Gunma Saitama Chiba Tokyo Kanagawa
+  },
+  {
+    id: "tokyo",
+    name: "Tokyo",
+    nameJa: "東京",
+    prefectures: ["13"], // Tokyo
+  },
+  {
+    id: "chubu",
+    name: "Chubu",
+    nameJa: "中部",
+    prefectures: ["15", "16", "17", "18", "19", "20", "21", "22", "23"], // Gifu Shizuoka Aichi Niigata Toyama Ishikawa Fukui Yamanashi Nagano
+  },
+  {
+    id: "kansai",
+    name: "Kansai",
+    nameJa: "関西",
+    prefectures: ["24", "25", "26", "27", "28", "29", "30"], // Mie Shiga Kyoto Osaka Hyogo Nara Wakayama
+  },
+  {
+    id: "chugoku",
+    name: "Chugoku",
+    nameJa: "中国",
+    prefectures: ["31", "32", "33", "34", "35"], // Tottori Shimane Okayama Hiroshima Yamaguchi
+  },
+  {
+    id: "shikoku",
+    name: "Shikoku",
+    nameJa: "四国",
+    prefectures: ["36", "37", "38", "39"], // Tokushima Kagawa Ehime Kochi
+  },
+  {
+    id: "kyushu",
+    name: "Kyushu",
+    nameJa: "九州",
+    prefectures: ["40", "41", "42", "43", "44", "45", "46"], // Fukuoka Saga Nagasaki Kumamoto Oita Miyazaki Kagoshima
+  },
+  {
+    id: "okinawa",
+    name: "Okinawa",
+    nameJa: "沖縄",
+    prefectures: ["47"],
+  },
 ];
