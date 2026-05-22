@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from "svelte";
-  import { ArrowLeft, ChevronDown, ChevronUp } from "@lucide/svelte";
+  import { ChevronDown, ChevronUp } from "@lucide/svelte";
   import { companyNameMapping, lineNameMapping } from "$lib/line-name-mapping";
   import CompanyCell from "$lib/CompanyCell.svelte";
   import LineCell from "$lib/LineCell.svelte";
@@ -13,21 +13,14 @@
 
   const dispatch = createEventDispatcher();
 
-  let mobileCollapsed = false;
-  let mobileShowLines = false;
+  let collapsed = false;
 
   const handleSelectCompany = (company) => {
-    mobileShowLines = true;
     dispatch("selectcompany", company);
   };
 
   const handleSelectFullRegion = () => {
-    mobileShowLines = false;
     dispatch("selectfullregionmap");
-  };
-
-  const handleMobileBack = () => {
-    mobileShowLines = false;
   };
 
   const linePrimaryName = (selectedLine) => {
@@ -47,26 +40,27 @@
     return selectedCompany;
   };
 
-  $: if (!selectedCompany) {
-    mobileShowLines = false;
-  }
+  const companyEnglishName = (selectedCompany) => {
+    return companyNameMapping[selectedCompany]?.en ?? null;
+  };
+
 </script>
 
 <section
   id="controls-panel"
   class="flex flex-col bg-panel-background z-5 transition-all duration-200
-    {mobileCollapsed ? 'h-12' : 'h-[45vh]'} md:h-128"
+    {collapsed ? 'h-12' : 'h-[45vh] md:h-128'}"
 >
-  <!-- Mobile toggle bar (hidden on desktop) -->
+  <!-- Toggle bar -->
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
   <div
-    class="md:hidden shrink-0 flex items-center justify-between px-4 h-12 border-b border-border cursor-pointer"
-    on:click={() => (mobileCollapsed = !mobileCollapsed)}
+    class="shrink-0 flex items-center justify-between px-4 h-12 border-b border-border cursor-pointer"
+    on:click={() => (collapsed = !collapsed)}
     on:keydown={(e) =>
-      e.key === "Enter" && (mobileCollapsed = !mobileCollapsed)}
+      e.key === "Enter" && (collapsed = !collapsed)}
     role="button"
     tabindex="0"
-    aria-expanded={!mobileCollapsed}
+    aria-expanded={!collapsed}
   >
     <div class="flex items-center gap-2 min-w-0 overflow-hidden text-sm">
       {#if selectedCompany}
@@ -85,18 +79,16 @@
         </span>
       {/if}
     </div>
-    {#if mobileCollapsed}
+    {#if collapsed}
       <ChevronUp size={16} class="text-muted shrink-0 ml-2" />
     {:else}
       <ChevronDown size={16} class="text-muted shrink-0 ml-2" />
     {/if}
   </div>
 
-  <!-- Panel content (hidden on mobile when collapsed) -->
+  <!-- Panel content (hidden when collapsed) -->
   <div
-    class="{mobileCollapsed
-      ? 'hidden md:flex'
-      : 'flex'} flex-col flex-1 overflow-hidden"
+    class="{collapsed ? 'hidden' : 'flex'} flex-col flex-1 overflow-hidden"
   >
     <!-- Region Selector Tabs -->
     <div
@@ -198,76 +190,67 @@
       </div>
     </div>
 
-    <!-- Mobile: single-column navigation -->
+    <!-- Mobile: accordion list navigation -->
     <div class="flex md:hidden flex-col flex-1 overflow-hidden">
-      {#if mobileShowLines && selectedCompany}
-        <!-- Lines view with back button -->
-        <div
-          class="h-10 shrink-0 flex items-center gap-2 px-3 border-b border-border bg-[var(--color-surface-soft)]"
+      <div class="flex-1 overflow-y-auto scrollbar-thin">
+        <!-- All lines entry -->
+        <button
+          class="w-full text-left px-4 py-2.5 border-b border-border transition-colors duration-150
+            {selectedCompany === null && selectedLine === null
+            ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+            : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
+          on:click={handleSelectFullRegion}
         >
-          <button
-            class="flex items-center gap-1.5 text-sm text-muted hover:text-secondary cursor-pointer"
-            on:click={handleMobileBack}
-          >
-            <ArrowLeft size={14} />
-            <span>Companies</span>
-          </button>
-          <span class="text-border mx-0.5">·</span>
-          <span class="text-sm text-accent-secondary font-medium truncate"
-            >{selectedCompany}</span
-          >
-          <span class="ml-auto text-xxs text-muted shrink-0">
-            {(
-              trainCompanyNames.find((c) => c.company === selectedCompany)
-                ?.lines || []
-            ).length} lines
+          <span class="text-sm font-medium">
+            {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
           </span>
-        </div>
-        <div class="flex-1 overflow-y-auto p-2 scrollbar-thin">
-          <div class="grid grid-cols-2 gap-1.5">
-            {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line}
-              <LineCell
-                {line}
-                company={selectedCompany}
-                selected={selectedLine === line}
-                on:click={() =>
-                  dispatch("selectline", { company: selectedCompany, line })}
-              />
-            {/each}
-          </div>
-        </div>
-      {:else}
-        <!-- Companies view -->
-        <div class="flex-1 overflow-y-auto p-2 scrollbar-thin">
-          <button
-            class="w-full text-muted cursor-pointer text-left transition-all duration-200 p-[8px_12px] rounded-lg mb-2 hover:bg-[var(--color-accent-primary-soft)] {selectedCompany ===
-              null && selectedLine === null
-              ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
-              : 'bg-transparent'}"
-            on:click={handleSelectFullRegion}
-          >
-            <div class="flex items-center gap-2.5">
-              <span class="opacity-80">🌐</span>
-              <div class="flex flex-col">
-                <span class="text-sm text-secondary font-medium">
-                  {regions.find((r) => r.id === selectedRegion)?.nameJa ||
-                    "全国"}
-                </span>
-                <span class="text-xxs text-muted">All regional lines</span>
+          <span class="text-xxs text-muted ml-2">All regional lines</span>
+        </button>
+
+        <!-- Company accordion rows -->
+        {#each trainCompanyNames as company}
+          <div class="border-b border-border">
+            <!-- Company row -->
+            <button
+              class="w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors duration-150
+                {selectedCompany === company.company
+                ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+                : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
+              on:click={() => handleSelectCompany(company.company)}
+            >
+              <span class="flex flex-col min-w-0 truncate">
+                <span class="text-sm font-medium truncate">{companyPrimaryName(company.company)}</span>
+                {#if companyEnglishName(company.company)}
+                  <span class="text-xxs text-muted truncate">{companyEnglishName(company.company)}</span>
+                {/if}
+              </span>
+              <span class="flex items-center gap-1.5 shrink-0 ml-2">
+                <span class="text-xxs text-muted">{company.lines.length}</span>
+                {#if selectedCompany === company.company}
+                  <ChevronUp size={14} class="text-muted" />
+                {:else}
+                  <ChevronDown size={14} class="text-muted" />
+                {/if}
+              </span>
+            </button>
+
+            <!-- Expanded lines -->
+            {#if selectedCompany === company.company}
+              <div class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5">
+                {#each company.lines as line}
+                  <LineCell
+                    {line}
+                    company={selectedCompany}
+                    selected={selectedLine === line}
+                    on:click={() =>
+                      dispatch("selectline", { company: selectedCompany, line })}
+                  />
+                {/each}
               </div>
-            </div>
-          </button>
-          <div class="grid grid-cols-2 gap-1.5">
-            {#each trainCompanyNames as company}
-              <CompanyCell
-                {company}
-                selected={selectedCompany === company.company}
-                on:click={() => handleSelectCompany(company.company)}
-              />
-            {/each}
+            {/if}
           </div>
-        </div>
-      {/if}
+        {/each}
+      </div>
     </div>
   </div>
 </section>

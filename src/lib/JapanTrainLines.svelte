@@ -37,6 +37,11 @@
   let initPanX = 0;
   let initPanY = 0;
 
+  // Touch double-tap state
+  let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+
   // Touch pinch-to-zoom state
   let initialPinchDistance = 0;
   let initialPinchZoom = 0;
@@ -275,6 +280,34 @@
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
+      const now = Date.now();
+      const dt = now - lastTapTime;
+      const dx = touch.clientX - lastTapX;
+      const dy = touch.clientY - lastTapY;
+      if (dt < 300 && Math.hypot(dx, dy) < 30) {
+        e.preventDefault();
+        zoomToPoint(clientPointToSvgPoint(touch.clientX, touch.clientY), 2);
+        lastTapTime = 0;
+        return;
+      }
+      lastTapTime = now;
+      lastTapX = touch.clientX;
+      lastTapY = touch.clientY;
+
+      if (touch.target.classList.contains("station-dot")) {
+        const containerRect = svgViewerEl.getBoundingClientRect();
+        const name = touch.target.getAttribute("data-station-name");
+        hoveredStation = {
+          name,
+          nameEn: stationNameMapping[name] ?? null,
+          lineName: touch.target.getAttribute("data-line-name"),
+          x: touch.clientX - containerRect.left,
+          y: touch.clientY - containerRect.top,
+        };
+        return;
+      }
+
+      hoveredStation = null;
       const point = clientPointToSvgPoint(touch.clientX, touch.clientY);
       isDragging = true;
       startX = point.x;
@@ -297,6 +330,7 @@
   };
 
   const handleTouchMove = (e) => {
+    if (hoveredStation) hoveredStation = null;
     if (e.touches.length === 1 && isDragging) {
       const touch = e.touches[0];
       const point = clientPointToSvgPoint(touch.clientX, touch.clientY);
@@ -397,15 +431,16 @@
 >
   <!-- Title / Header Overlay -->
   <header
-    class="py-4 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center px-6 z-10 transition-colors duration-200"
+    class="px-4 py-4 bg-panel-background backdrop-blur-md border-b border-border flex justify-between items-center z-10 transition-colors duration-200"
   >
-    <div class="flex items-left gap-2 md:flex-row flex-col md:items-center">
-      <h1 class="text-md font-medium m-0 text-primary">
-        <span class="text-xl">🚇</span>
-        Japan Train Lines by
-        <a href="http://liquidx.net" class="underline">@liquidx</a>
-      </h1>
-      <span class="text-right text-md text-primary md:pl-3">日本鉄道路線図</span
+    <div
+      class="flex items-baseline justify-between gap-4 md:text-md text-xs font-medium"
+    >
+      <h1 class="text-primary">Japan Train Lines</h1>
+      <span class="text-primary">日本鉄道路線図</span>
+      <span class="text-secondary">
+        by
+        <a href="http://liquidx.net" class="underline">@liquidx</a></span
       >
     </div>
   </header>
