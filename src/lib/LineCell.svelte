@@ -1,8 +1,5 @@
 <script>
-  import {
-    lineNameMapping,
-    companyNameMapping,
-  } from "$lib/line-name-mapping.js";
+  import { lineNameMapping } from "$lib/line-name-mapping.js";
   import { getLineColor } from "$lib/line-colors.js";
 
   export let line;
