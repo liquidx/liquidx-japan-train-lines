@@ -27,8 +27,8 @@
   --color-switch-off: #334155;
   --color-switch-knob: #ffffff;
   --color-map-grid: rgb(255 255 255 / 0.02);
-  --color-map-land-fill: #111625;
-  --color-map-land-stroke: rgb(255 255 255 / 0.05);
+  --color-map-land-fill: #282b32;
+  --color-map-land-stroke: rgb(73, 73, 79);
   --color-map-line-mono: #f8fafc;
   --color-map-station-mono: #f8fafc;
   --shadow-panel: 0 10px 25px -5px rgb(0 0 0 / 0.5);
