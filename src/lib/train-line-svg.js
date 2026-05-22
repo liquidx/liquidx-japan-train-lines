@@ -4,6 +4,8 @@ import { regions } from "./regions.js";
 
 const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
 
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const escape_xml = (value) => {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -43,16 +45,16 @@ const color_for_line = (company_name, line_name, options = {}) => {
 
 const features_for_line = (
   geojson,
-  company_name_pattern,
-  line_name_pattern
+  company_name,
+  line_name
 ) => {
   let features = [];
   if (!geojson?.features) {
     return features;
   }
 
-  let line_name_re = line_name_pattern ? new RegExp(line_name_pattern, "i") : null;
-  let company_name_re = company_name_pattern ? new RegExp(company_name_pattern, "i") : null;
+  let line_name_re = line_name ? new RegExp(`^${escapeRegExp(line_name)}$`, "i") : null;
+  let company_name_re = company_name ? new RegExp(`^${escapeRegExp(company_name)}$`, "i") : null;
 
   for (var feature of geojson.features) {
     let line_name = feature.properties["路線名"];
@@ -71,13 +73,13 @@ const features_for_line = (
 
 const segments_for_line = (
   geojson,
-  company_name_pattern,
-  line_name_pattern
+  company_name,
+  line_name
 ) => {
   let segments = features_for_line(
     geojson,
-    company_name_pattern,
-    line_name_pattern
+    company_name,
+    line_name
   );
 
   // Group segments by company and line name to join segments of each line separately
@@ -194,6 +196,7 @@ export const svg_from_segments = (
     segments = geojson.features;
     stations = station_geojson?.features || [];
   }
+
   if (correction) {
     for (var include of correction.includes) {
       segments = segments.concat(
@@ -209,6 +212,7 @@ export const svg_from_segments = (
         filter.company,
         filter.line
       );
+
       let filter_b = bounding_box(filter_segments);
       segments = segments.filter((v, i, s) => {
         let p = v.geometry.coordinates[0];
