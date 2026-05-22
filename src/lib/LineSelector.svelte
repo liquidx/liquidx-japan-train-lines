@@ -43,7 +43,6 @@
   const companyEnglishName = (selectedCompany) => {
     return companyNameMapping[selectedCompany]?.en ?? null;
   };
-
 </script>
 
 <section
@@ -52,12 +51,10 @@
     {collapsed ? 'h-12' : 'h-[45vh] md:h-128'}"
 >
   <!-- Toggle bar -->
-  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
   <div
     class="shrink-0 flex items-center justify-between px-4 h-12 border-b border-border cursor-pointer"
     on:click={() => (collapsed = !collapsed)}
-    on:keydown={(e) =>
-      e.key === "Enter" && (collapsed = !collapsed)}
+    on:keydown={(e) => e.key === "Enter" && (collapsed = !collapsed)}
     role="button"
     tabindex="0"
     aria-expanded={!collapsed}
@@ -87,14 +84,12 @@
   </div>
 
   <!-- Panel content (hidden when collapsed) -->
-  <div
-    class="{collapsed ? 'hidden' : 'flex'} flex-col flex-1 overflow-hidden"
-  >
+  <div class="{collapsed ? 'hidden' : 'flex'} flex-col flex-1 overflow-hidden">
     <!-- Region Selector Tabs -->
     <div
       class="flex bg-panel-background border-b border-border px-1 gap-1.5 py-1 items-center overflow-x-auto scrollbar-thin shrink-0"
     >
-      {#each regions as r}
+      {#each regions as r (r.id)}
         <button
           class="flex items-center px-2 py-1 min-w-16 rounded-lg border cursor-pointer whitespace-nowrap transition-all duration-200 {selectedRegion ===
           r.id
@@ -142,7 +137,7 @@
             </div>
           </button>
 
-          {#each trainCompanyNames as company}
+          {#each trainCompanyNames as company (company.company)}
             <CompanyCell
               {company}
               selected={selectedCompany === company.company}
@@ -159,7 +154,7 @@
             <div
               class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 w-full"
             >
-              {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line}
+              {#each trainCompanyNames.find((c) => c.company === selectedCompany)?.lines || [] as line (line)}
                 <LineCell
                   {line}
                   company={selectedCompany}
@@ -208,7 +203,7 @@
         </button>
 
         <!-- Company accordion rows -->
-        {#each trainCompanyNames as company}
+        {#each trainCompanyNames as company (company.company)}
           <div class="border-b border-border">
             <!-- Company row -->
             <button
@@ -219,9 +214,13 @@
               on:click={() => handleSelectCompany(company.company)}
             >
               <span class="flex flex-col min-w-0 truncate">
-                <span class="text-sm font-medium truncate">{companyPrimaryName(company.company)}</span>
+                <span class="text-sm font-medium truncate"
+                  >{companyPrimaryName(company.company)}</span
+                >
                 {#if companyEnglishName(company.company)}
-                  <span class="text-xxs text-muted truncate">{companyEnglishName(company.company)}</span>
+                  <span class="text-xxs text-muted truncate"
+                    >{companyEnglishName(company.company)}</span
+                  >
                 {/if}
               </span>
               <span class="flex items-center gap-1.5 shrink-0 ml-2">
@@ -236,14 +235,19 @@
 
             <!-- Expanded lines -->
             {#if selectedCompany === company.company}
-              <div class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5">
+              <div
+                class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5"
+              >
                 {#each company.lines as line}
                   <LineCell
                     {line}
                     company={selectedCompany}
                     selected={selectedLine === line}
                     on:click={() =>
-                      dispatch("selectline", { company: selectedCompany, line })}
+                      dispatch("selectline", {
+                        company: selectedCompany,
+                        line,
+                      })}
                   />
                 {/each}
               </div>

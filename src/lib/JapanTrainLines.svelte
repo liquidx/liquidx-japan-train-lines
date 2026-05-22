@@ -4,6 +4,7 @@
   import { stationNameMapping } from "$lib/line-name-mapping.js";
   import MapControls from "$lib/MapAppearanceControls.svelte";
   import LineSelector from "$lib/LineSelector.svelte";
+  import { SvelteURLSearchParams } from "svelte/reactivity";
 
   export let railroadGeoJsonUrl = "/railroad.geojson";
   export let stationGeoJsonUrl = null;
@@ -108,8 +109,7 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations =
-      forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
+    const showStations = forceShowStations || pixelsPerDegree > 800;
     const adjustedStationRadius =
       (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
@@ -127,7 +127,7 @@
     regions = data.regions;
     regionDataMap = data.regionData;
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new SvelteURLSearchParams(window.location.search);
     const urlRegion = params.get("region");
     const urlCompany = params.get("company");
     const urlLine = params.get("line");
@@ -141,7 +141,7 @@
   });
 
   $: if (urlSyncReady) {
-    const params = new URLSearchParams();
+    const params = new SvelteURLSearchParams();
     params.set("region", selectedRegion);
     if (selectedCompany) params.set("company", selectedCompany);
     if (selectedLine) params.set("line", selectedLine);
@@ -447,6 +447,7 @@
 
   <!-- Interactive Map Viewport -->
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <!-- svelte-ignore a11y_mouse_events_have_key_events -->
   <div
     id="svg-viewer"
     role="application"
