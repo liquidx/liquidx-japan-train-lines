@@ -13,7 +13,7 @@ export const lineNames = (geojson) => {
 };
 
 // Merge segments into a continuous paths.
-export const joinSegments = (segments) => {
+export const joinSegments = (segments, smartMerge = true) => {
   if (!segments || segments.length === 0) {
     return [];
   }
@@ -22,7 +22,8 @@ export const joinSegments = (segments) => {
   let paths = [];
   let path = [];
 
-  if (true) {
+
+  if (smartMerge) {
     // Get the first segment.
     let firstSegment = remainingSegments.shift();
     let initialPoints = firstSegment.geometry.coordinates;

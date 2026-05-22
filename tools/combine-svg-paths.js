@@ -1,4 +1,4 @@
-import { parse, stringify } from "svgson";
+import { parse } from "svgson";
 import fs from "fs";
 
 let combiner = (svg) => {
@@ -20,7 +20,7 @@ let combiner = (svg) => {
 
     var paths = [];
     console.log(`segments: ${n.children.length}`);
-    for (var i = 0; i < n.children.length; i++) {
+    for (let i = 0; i < n.children.length; i++) {
       var child = n.children[i];
       if (child.name == "path") {
         var path = child.attributes.d;
@@ -46,7 +46,7 @@ let combiner = (svg) => {
         var polyline = child.attributes.points;
         var poly_points = polyline.split(" ");
         var points = [];
-        for (var j = 0; j < poly_points.length / 2; j++) {
+        for (let j = 0; j < poly_points.length / 2; j++) {
           points.push({ x: poly_points[j * 2], y: poly_points[j * 2 + 1] });
         }
         paths.push({
@@ -66,11 +66,11 @@ let combiner = (svg) => {
     };
 
     // find all the connection points.
-    for (var i = 0; i < paths.length; i++) {
+    for (let i = 0; i < paths.length; i++) {
       var current_path = paths[i];
       current_path.start_joins = [];
       current_path.end_joins = [];
-      for (var j = 0; j < paths.length; j++) {
+      for (let j = 0; j < paths.length; j++) {
         if (i == j) {
           continue;
         }
@@ -97,14 +97,13 @@ let combiner = (svg) => {
     console.log("After :::");
 
     // start and join all paths until they fork.
-    var start_terminals = [];
-    var end_terminals = [];
-    var joined_paths = [];
+    // var start_terminals = [];
+    // var end_terminals = [];
+    // var joined_paths = [];
 
     let join_path = (n, prev_point) => {
       var next = null;
       var points_at_this_node = n.points;
-      var last_point_at_this_node = null;
 
       var is_fork = false;
 
@@ -146,26 +145,26 @@ let combiner = (svg) => {
       if (is_fork) {
         // remove connection to forks and treat them as terminals.
         if (is_fork == "end") {
-          for (var i = 0; i < n.end_joins.length; i++) {
-            var next = n.end_joins[i];
-            var at_start = next.start_joins.indexOf(n);
+          for (let i = 0; i < n.end_joins.length; i++) {
+            let next = n.end_joins[i];
+            let at_start = next.start_joins.indexOf(n);
             if (at_start != -1) {
               next.start_joins = next.start_joins.splice(at_start, 1);
             }
-            var at_end = next.end_joins.indexOf(n);
+            let at_end = next.end_joins.indexOf(n);
             if (at_end != -1) {
               next.end_joins = next.end_joins.splice(at_end, 1);
             }
           }
           n.end_joins = [];
         } else {
-          for (var i = 0; i < n.start_joins.length; i++) {
-            var next = n.start_joins[i];
-            var at_start = next.start_joins.indexOf(n);
+          for (let i = 0; i < n.start_joins.length; i++) {
+            let next = n.start_joins[i];
+            let at_start = next.start_joins.indexOf(n);
             if (at_start != -1) {
               next.start_joins = next.start_joins.splice(at_start, 1);
             }
-            var at_end = next.end_joins.indexOf(n);
+            let at_end = next.end_joins.indexOf(n);
             if (at_end != -1) {
               next.end_joins = next.end_joins.splice(at_end, 1);
             }
@@ -183,7 +182,7 @@ let combiner = (svg) => {
         return { chain: [n.id], points: points_at_this_node }; // reached the end.
       }
 
-      last_point_at_this_node =
+      const last_point_at_this_node =
         points_at_this_node[points_at_this_node.length - 1];
       var results = join_path(next, last_point_at_this_node);
       return {
@@ -192,8 +191,8 @@ let combiner = (svg) => {
       };
     };
 
-    for (var i = 0; i < paths.length; i++) {
-      var p = paths[i];
+    for (let i = 0; i < paths.length; i++) {
+      let p = paths[i];
       if (p.crawled) {
         continue;
       }
@@ -206,20 +205,20 @@ let combiner = (svg) => {
       }
     }
 
-    for (var i = 0; i < paths.length; i++) {
-      var p = paths[i];
+    for (let i = 0; i < paths.length; i++) {
+      let p = paths[i];
       if (p.combined) {
-        var starts = p.start_joins.map((x) => x.id);
-        var ends = p.end_joins.map((x) => x.id);
+        let starts = p.start_joins.map((x) => x.id);
+        let ends = p.end_joins.map((x) => x.id);
         console.log(`path: ${p.id} starts: ${starts} ends: ${ends} `);
       }
     }
 
-    for (var i = 0; i < paths.length; i++) {
-      var p = paths[i];
+    for (let i = 0; i < paths.length; i++) {
+      let p = paths[i];
       if (p.combined) {
-        var path = `M${p.points[0].x},${p.points[0].y}`;
-        for (var j = 0; j < p.points.length; j++) {
+        let path = `M${p.points[0].x},${p.points[0].y}`;
+        for (let j = 0; j < p.points.length; j++) {
           path = path + ` L${p.points[j].x},${p.points[j].y}`;
         }
         console.log(`<path d="${path}" id="path-${i}"></path>`);

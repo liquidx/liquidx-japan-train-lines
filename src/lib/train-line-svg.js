@@ -2,8 +2,6 @@ import { joinSegments } from "./train-lines.js";
 import { getLineColor } from "./line-colors.js";
 import { regions } from "./regions.js";
 
-const colors = ["8da1b9", "95adb6", "cbb3bf", "dbc7be", "ef959c"];
-
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const escape_xml = (value) => {
@@ -15,14 +13,6 @@ const escape_xml = (value) => {
     .replaceAll("'", "&apos;");
 };
 
-const fallback_color_for_line = (company_name, line_name) => {
-  let key = `${company_name || ""}:${line_name || ""}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash + key.charCodeAt(i) * (i + 1)) % colors.length;
-  }
-  return colors[hash];
-};
 
 const svg_paint = (color) => {
   if (color.startsWith("#") || color.startsWith("var(") || color.startsWith("rgb")) {
@@ -157,7 +147,6 @@ const bounding_box = (segments) => {
       min_y = coordinates[0][1];
       max_x = coordinates[0][0];
       max_y = coordinates[0][1];
-      max_y = coordinates[0][1];
     }
     for (var c of coordinates) {
       if (c[0] < min_x) {
@@ -214,10 +203,9 @@ export const svg_from_segments = (
       );
 
       let filter_b = bounding_box(filter_segments);
-      segments = segments.filter((v, i, s) => {
+      segments = segments.filter((v) => {
         let p = v.geometry.coordinates[0];
         return (
-          true &&
           (!filter.within_x || p[0] <= filter_b.max_x) &&
           (!filter.within_y || p[1] <= filter_b.max_y) &&
           (!filter.within_x || p[0] >= filter_b.min_x) &&
@@ -230,7 +218,6 @@ export const svg_from_segments = (
           return false;
         }
         return (
-          true &&
           (!filter.within_x || p[0] <= filter_b.max_x) &&
           (!filter.within_y || p[1] <= filter_b.max_y) &&
           (!filter.within_x || p[0] >= filter_b.min_x) &&
