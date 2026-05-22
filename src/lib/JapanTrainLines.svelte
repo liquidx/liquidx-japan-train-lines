@@ -279,16 +279,16 @@
     }
   };
 
+  const clampZoom = (newZoom) => {
+    const pxPerDeg = computePixelsPerDegree(mapInfo, newZoom);
+    if (pxPerDeg < 30 || pxPerDeg > 10000) return zoom;
+    return newZoom;
+  };
+
   const zoomToPoint = (point, factor) => {
     const x = (point.x - panX) / zoom;
     const y = (point.y - panY) / zoom;
-    let newZoom = zoom * factor;
-    // Limit zoom scale range
-    //newZoom = Math.max(0.15, Math.min(20, newZoom));
-    const pxPerDeg = computePixelsPerDegree(mapInfo, newZoom);
-    if (pxPerDeg < 30) newZoom = zoom;
-    if (pxPerDeg > 10000) newZoom = zoom;
-
+    const newZoom = clampZoom(zoom * factor);
     panX = point.x - x * newZoom;
     panY = point.y - y * newZoom;
     zoom = newZoom;
@@ -420,9 +420,7 @@
     } else if (e.touches.length === 2) {
       const [t1, t2] = [e.touches[0], e.touches[1]];
       const newDist = getTouchDistance(t1, t2);
-      let newZoom = initialPinchZoom * (newDist / initialPinchDistance);
-      const pxPerDeg = computePixelsPerDegree(mapInfo, newZoom);
-      if (pxPerDeg < 30 || pxPerDeg > 10000) newZoom = zoom;
+      const newZoom = clampZoom(initialPinchZoom * (newDist / initialPinchDistance));
       panX = initialPinchSvgX - initialPinchMapX * newZoom;
       panY = initialPinchSvgY - initialPinchMapY * newZoom;
       zoom = newZoom;
