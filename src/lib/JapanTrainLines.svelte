@@ -1,37 +1,41 @@
+<svelte:options runes={true} />
+
 <script>
   import { onMount } from "svelte";
   import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
   import { stationNameMapping } from "$lib/line-name-mapping.js";
   import MapControls from "$lib/MapAppearanceControls.svelte";
   import LineSelector from "$lib/LineSelector.svelte";
-  import { SvelteURLSearchParams } from "svelte/reactivity";
 
-  export let railroadGeoJsonUrl = "/railroad.geojson";
-  export let stationGeoJsonUrl = null;
-  export let japanOutlineGeoJsonUrl = null;
-  export let mapPadding = 0.05;
-  let viewerEl;
-  let svgViewerEl;
-  let hoveredStation = null;
-  let regions = [];
+  let {
+    railroadGeoJsonUrl = "/railroad.geojson",
+    stationGeoJsonUrl = null,
+    japanOutlineGeoJsonUrl = null,
+    mapPadding = 0.05,
+  } = $props();
+
+  let viewerEl = $state();
+  let svgViewerEl = $state();
+  let hoveredStation = $state(null);
+  let regions = $state([]);
   let regionDataMap = {};
-  let trainCompanyNames = [];
-  let selectedRegion = "kanto";
-  let selectedCompany = null;
-  let selectedLine = null;
-  let urlSyncReady = false;
-  let showLineColors = true;
-  let showBaseMapOutline = true;
-  let forceShowStations = false;
-  let stationSizeMultiplier = 1;
-  let mapTheme = "dark";
-  let mapInfo = null;
+  let trainCompanyNames = $state([]);
+  let selectedRegion = $state("kanto");
+  let selectedCompany = $state(null);
+  let selectedLine = $state(null);
+  let urlSyncReady = $state(false);
+  let showLineColors = $state(true);
+  let showBaseMapOutline = $state(true);
+  let forceShowStations = $state(false);
+  let stationSizeMultiplier = $state(1);
+  let mapTheme = $state("dark");
+  let mapInfo = $state(null);
 
   // Pan & Zoom State
-  let zoom = 1;
-  let panX = 0;
-  let panY = 0;
-  let isDragging = false;
+  let zoom = $state(1);
+  let panX = $state(0);
+  let panY = $state(0);
+  let isDragging = $state(false);
 
   let startX = 0;
   let startY = 0;
@@ -128,7 +132,7 @@
     regions = data.regions;
     regionDataMap = data.regionData;
 
-    const params = new SvelteURLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
     const urlRegion = params.get("region");
     const urlCompany = params.get("company");
     const urlLine = params.get("line");
@@ -141,8 +145,10 @@
     registerKeyboardShortcuts();
   });
 
-  $: if (urlSyncReady) {
-    const params = new SvelteURLSearchParams();
+  // Sync selection state to URL
+  $effect(() => {
+    if (!urlSyncReady) return;
+    const params = new URLSearchParams();
     params.set("region", selectedRegion);
     if (selectedCompany) params.set("company", selectedCompany);
     if (selectedLine) params.set("line", selectedLine);
@@ -151,32 +157,28 @@
       "",
       `${window.location.pathname}?${params}`,
     );
-  }
+  });
 
-  // Reactive redraw whenever region, company, line, or render option changes
-  $: if (viewerEl && regions.length > 0) {
-    mapInfo = drawTrainLine(
-      selectedRegion,
-      selectedCompany,
-      selectedLine,
-      viewerEl,
-      640,
-      { showLineColors, showBaseMapOutline, mapTheme, padding: mapPadding },
-    );
-    applyMapTransform();
-  }
+  // Redraw map when region, company, line, or display options change
+  $effect(() => {
+    if (viewerEl && regions.length > 0) {
+      mapInfo = drawTrainLine(
+        selectedRegion,
+        selectedCompany,
+        selectedLine,
+        viewerEl,
+        640,
+        { showLineColors, showBaseMapOutline, mapTheme, padding: mapPadding },
+      );
+    }
+  });
 
-  $: mapTransform = {
-    zoom,
-    panX,
-    panY,
-    forceShowStations,
-    stationSizeMultiplier,
-  };
-
-  $: if (viewerEl && mapTransform) {
-    applyMapTransform();
-  }
+  // Apply pan/zoom transform when any relevant state changes
+  $effect(() => {
+    // Explicitly track all dependencies that affect the transform
+    void [zoom, panX, panY, forceShowStations, stationSizeMultiplier, mapInfo];
+    if (viewerEl) applyMapTransform();
+  });
 
   const handleReset = () => {
     zoom = 1;
@@ -451,14 +453,14 @@
     role="application"
     aria-label="Interactive train map viewer"
     bind:this={svgViewerEl}
-    on:mousedown={handleMouseDown}
-    on:dblclick={handleDoubleClick}
-    on:wheel={handleWheel}
-    on:mouseover={handleStationMouseOver}
-    on:mouseout={handleStationMouseOut}
-    on:touchstart={handleTouchStart}
-    on:touchmove={handleTouchMove}
-    on:touchend={handleTouchEnd}
+    onmousedown={handleMouseDown}
+    ondblclick={handleDoubleClick}
+    onwheel={handleWheel}
+    onmouseover={handleStationMouseOver}
+    onmouseout={handleStationMouseOut}
+    ontouchstart={handleTouchStart}
+    ontouchmove={handleTouchMove}
+    ontouchend={handleTouchEnd}
     class="map-viewport flex-1 relative overflow-hidden select-none touch-none border-b border-border transition-colors duration-200"
     style="cursor: {isDragging ? 'grabbing' : 'grab'};"
   >
@@ -476,9 +478,9 @@
       bind:showBaseMapOutline
       bind:forceShowStations
       bind:stationSizeMultiplier
-      on:zoomIn={zoomIn}
-      on:zoomOut={zoomOut}
-      on:reset={handleReset}
+      onzoomIn={zoomIn}
+      onzoomOut={zoomOut}
+      onreset={handleReset}
     />
 
     <!-- Station Tooltip -->
@@ -507,9 +509,9 @@
     {selectedRegion}
     {selectedCompany}
     {selectedLine}
-    on:selectregion={(e) => selectRegion(e.detail)}
-    on:selectcompany={(e) => selectCompany(e.detail)}
-    on:selectline={(e) => selectLine(e.detail.company, e.detail.line)}
-    on:selectfullregionmap={selectFullRegionMap}
+    onselectregion={selectRegion}
+    onselectcompany={selectCompany}
+    onselectline={(d) => selectLine(d.company, d.line)}
+    onselectfullregionmap={selectFullRegionMap}
   />
 </div>

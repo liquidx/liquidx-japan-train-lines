@@ -1,10 +1,10 @@
+<svelte:options runes={true} />
+
 <script>
   import { lineNameMapping } from "$lib/line-name-mapping.js";
   import { getLineColor } from "$lib/line-colors.js";
 
-  export let line;
-  export let company;
-  export let selected = false;
+  let { line, company, selected = false, onclick } = $props();
 
   const dotColor = (c, l) => {
     const hex = getLineColor(c, l);
@@ -23,7 +23,7 @@
   class="group flex flex-row justify-between items-center flex-nowrap gap-2 w-full text-muted cursor-pointer text-left transition-all duration-200 p-2 rounded-lg mb-1.5 hover:bg-selected-background hover:text-secondary {selected
     ? 'bg-[var(--color-accent-secondary-soft)] border-[color:var(--color-accent-secondary-border)] text-[var(--color-accent-tertiary)] shadow-[0_0_10px_var(--color-accent-secondary-soft)]'
     : ''}"
-  on:click
+  {onclick}
 >
   <span class="flex flex-col min-w-0">
     <span class="text-sm font-medium">{linePrimaryName(line)}</span>

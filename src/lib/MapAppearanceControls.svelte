@@ -1,5 +1,6 @@
+<svelte:options runes={true} />
+
 <script>
-  import { createEventDispatcher } from "svelte";
   import {
     ChevronUp,
     Circle,
@@ -15,15 +16,18 @@
   } from "@lucide/svelte";
   import ToggleOption from "$lib/ToggleOption.svelte";
 
-  export let mapTheme = "dark";
-  export let showLineColors = true;
-  export let showBaseMapOutline = true;
-  export let forceShowStations = false;
-  export let stationSizeMultiplier = 1;
+  let {
+    mapTheme = $bindable("dark"),
+    showLineColors = $bindable(true),
+    showBaseMapOutline = $bindable(true),
+    forceShowStations = $bindable(false),
+    stationSizeMultiplier = $bindable(1),
+    onzoomIn,
+    onzoomOut,
+    onreset,
+  } = $props();
 
-  let collapsed = true;
-
-  const dispatch = createEventDispatcher();
+  let collapsed = $state(true);
 </script>
 
 <!-- Map Appearance Panel (bottom-right, collapsible) with zoom controls in header -->
@@ -36,7 +40,7 @@
     >
       <button
         class="flex items-center gap-2 px-3 flex-1 h-full cursor-pointer"
-        on:click={() => (collapsed = !collapsed)}
+        onclick={() => (collapsed = !collapsed)}
         aria-expanded={!collapsed}
       >
         <SlidersHorizontal
@@ -61,7 +65,7 @@
         class="flex items-center gap-0.5 pr-1.5 pl-1 border-l border-border h-7"
       >
         <button
-          on:click|stopPropagation={() => dispatch("zoomIn")}
+          onclick={(e) => { e.stopPropagation(); onzoomIn?.(); }}
           title="Zoom In"
           aria-label="Zoom In"
           class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
@@ -69,7 +73,7 @@
           <Plus size={14} strokeWidth={2.5} />
         </button>
         <button
-          on:click|stopPropagation={() => dispatch("zoomOut")}
+          onclick={(e) => { e.stopPropagation(); onzoomOut?.(); }}
           title="Zoom Out"
           aria-label="Zoom Out"
           class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
@@ -77,7 +81,7 @@
           <Minus size={14} strokeWidth={2.5} />
         </button>
         <button
-          on:click|stopPropagation={() => dispatch("reset")}
+          onclick={(e) => { e.stopPropagation(); onreset?.(); }}
           title="Reset View"
           aria-label="Reset View"
           class="w-7 h-7 rounded-md border-none bg-transparent text-muted flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary active:bg-[var(--color-accent-secondary-soft)] active:text-accent-secondary"
@@ -97,7 +101,7 @@
             'dark'
               ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
               : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
-            on:click={() => (mapTheme = "dark")}
+            onclick={() => (mapTheme = "dark")}
             aria-pressed={mapTheme === "dark"}
           >
             <Moon size={14} strokeWidth={2.2} />
@@ -108,7 +112,7 @@
             'light'
               ? 'bg-[var(--color-accent-primary-soft)] border-border text-accent-primary'
               : 'text-muted hover:bg-[var(--color-surface-hover)]'}"
-            on:click={() => (mapTheme = "light")}
+            onclick={() => (mapTheme = "light")}
             aria-pressed={mapTheme === "light"}
           >
             <Sun size={14} strokeWidth={2.2} />

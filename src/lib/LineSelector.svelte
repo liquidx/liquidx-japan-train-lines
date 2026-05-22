@@ -1,47 +1,41 @@
+<svelte:options runes={true} />
+
 <script>
-  import { createEventDispatcher } from "svelte";
   import { ChevronDown, ChevronUp } from "@lucide/svelte";
   import { companyNameMapping, lineNameMapping } from "$lib/line-name-mapping";
   import CompanyCell from "$lib/CompanyCell.svelte";
   import LineCell from "$lib/LineCell.svelte";
 
-  export let regions = [];
-  export let trainCompanyNames = [];
-  export let selectedRegion = null;
-  export let selectedCompany = null;
-  export let selectedLine = null;
+  let {
+    regions = [],
+    trainCompanyNames = [],
+    selectedRegion = null,
+    selectedCompany = null,
+    selectedLine = null,
+    onselectregion,
+    onselectcompany,
+    onselectline,
+    onselectfullregionmap,
+  } = $props();
 
-  const dispatch = createEventDispatcher();
+  let collapsed = $state(false);
 
-  let collapsed = false;
-
-  const handleSelectCompany = (company) => {
-    dispatch("selectcompany", company);
-  };
-
-  const handleSelectFullRegion = () => {
-    dispatch("selectfullregionmap");
-  };
-
-  const linePrimaryName = (selectedLine) => {
-    if (lineNameMapping[selectedLine] && lineNameMapping[selectedLine].ja) {
-      return lineNameMapping[selectedLine].ja;
+  const linePrimaryName = (line) => {
+    if (lineNameMapping[line] && lineNameMapping[line].ja) {
+      return lineNameMapping[line].ja;
     }
-    return selectedLine;
+    return line;
   };
 
-  const companyPrimaryName = (selectedCompany) => {
-    if (
-      companyNameMapping[selectedCompany] &&
-      companyNameMapping[selectedCompany].ja
-    ) {
-      return companyNameMapping[selectedCompany].ja;
+  const companyPrimaryName = (company) => {
+    if (companyNameMapping[company] && companyNameMapping[company].ja) {
+      return companyNameMapping[company].ja;
     }
-    return selectedCompany;
+    return company;
   };
 
-  const companyEnglishName = (selectedCompany) => {
-    return companyNameMapping[selectedCompany]?.en ?? null;
+  const companyEnglishName = (company) => {
+    return companyNameMapping[company]?.en ?? null;
   };
 </script>
 
@@ -53,8 +47,8 @@
   <!-- Toggle bar -->
   <div
     class="shrink-0 flex items-center justify-between px-4 h-12 border-b border-border cursor-pointer"
-    on:click={() => (collapsed = !collapsed)}
-    on:keydown={(e) => e.key === "Enter" && (collapsed = !collapsed)}
+    onclick={() => (collapsed = !collapsed)}
+    onkeydown={(e) => e.key === "Enter" && (collapsed = !collapsed)}
     role="button"
     tabindex="0"
     aria-expanded={!collapsed}
@@ -95,7 +89,7 @@
           r.id
             ? 'border-border text-accent-primary'
             : 'bg-transparent border-transparent text-muted hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]'}"
-          on:click={() => dispatch("selectregion", r.id)}
+          onclick={() => onselectregion?.(r.id)}
         >
           <div
             class="flex flex-col items-start leading-[1.1] {selectedRegion ===
@@ -122,7 +116,7 @@
               null && selectedLine === null
               ? 'bg-selected-background text-accent-primary'
               : 'bg-transparent'}"
-            on:click={() => dispatch("selectfullregionmap")}
+            onclick={() => onselectfullregionmap?.()}
           >
             <div class="flex flex-col">
               <span class="text-sm text-secondary">
@@ -141,7 +135,7 @@
             <CompanyCell
               {company}
               selected={selectedCompany === company.company}
-              on:click={() => dispatch("selectcompany", company.company)}
+              onclick={() => onselectcompany?.(company.company)}
             />
           {/each}
         </div>
@@ -159,8 +153,7 @@
                   {line}
                   company={selectedCompany}
                   selected={selectedLine === line}
-                  on:click={() =>
-                    dispatch("selectline", { company: selectedCompany, line })}
+                  onclick={() => onselectline?.({ company: selectedCompany, line })}
                 />
               {/each}
             </div>
@@ -194,7 +187,7 @@
             {selectedCompany === null && selectedLine === null
             ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
             : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
-          on:click={handleSelectFullRegion}
+          onclick={() => onselectfullregionmap?.()}
         >
           <span class="text-sm font-medium">
             {regions.find((r) => r.id === selectedRegion)?.nameJa || "全国"}
@@ -211,7 +204,7 @@
                 {selectedCompany === company.company
                 ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
                 : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
-              on:click={() => handleSelectCompany(company.company)}
+              onclick={() => onselectcompany?.(company.company)}
             >
               <span class="flex flex-col min-w-0 truncate">
                 <span class="text-sm font-medium truncate"
@@ -243,11 +236,7 @@
                     {line}
                     company={selectedCompany}
                     selected={selectedLine === line}
-                    on:click={() =>
-                      dispatch("selectline", {
-                        company: selectedCompany,
-                        line,
-                      })}
+                    onclick={() => onselectline?.({ company: selectedCompany, line })}
                   />
                 {/each}
               </div>

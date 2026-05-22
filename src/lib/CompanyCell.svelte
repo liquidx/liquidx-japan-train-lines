@@ -1,8 +1,9 @@
+<svelte:options runes={true} />
+
 <script>
   import { companyNameMapping } from "$lib/line-name-mapping.js";
 
-  export let company; // { company: string, lines: string[] }
-  export let selected = false;
+  let { company, selected = false, onclick } = $props();
 
   const companyLinePrimaryName = (c) => {
     if (companyNameMapping[c] && companyNameMapping[c].ja) {
@@ -16,7 +17,7 @@
   class="flex flex-row justify-between items-center flex-nowrap gap-2 w-full text-muted cursor-pointer text-left transition-all duration-200 p-2 rounded-lg mb-1.5 hover:bg-selected-background hover:text-secondary {selected
     ? 'bg-selected-background text-accent-primary'
     : 'bg-transparent'}"
-  on:click
+  {onclick}
 >
   <div
     class="flex flex-col min-w-0 {selected

@@ -1,18 +1,23 @@
+<svelte:options runes={true} />
+
 <script>
-  export let checked = false;
-  export let label = "";
-  export let description = "";
-  export let color = "var(--color-accent-primary)";
+  let {
+    checked = $bindable(false),
+    label = "",
+    description = "",
+    color = "var(--color-accent-primary)",
+    children,
+  } = $props();
 </script>
 
 <button
   class="w-full min-h-11 rounded-lg border border-transparent bg-transparent px-2.5 py-2 flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:bg-[var(--color-surface-hover)] hover:border-border"
-  on:click={() => (checked = !checked)}
+  onclick={() => (checked = !checked)}
   aria-pressed={checked}
 >
   <span class="flex items-center gap-2 min-w-0">
     <div class="w-6">
-      <slot />
+      {@render children?.()}
     </div>
     <span class="flex flex-col min-w-0">
       <span class="text-xs font-medium text-[var(--color-text-secondary)]"
