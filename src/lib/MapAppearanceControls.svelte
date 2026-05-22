@@ -119,7 +119,7 @@
         <ToggleOption
           bind:checked={showLineColors}
           label="Line colors"
-          description={""}
+          description=""
           color="var(--color-accent-primary)"
         >
           <Palette
@@ -132,7 +132,7 @@
         <ToggleOption
           bind:checked={showBaseMapOutline}
           label="Base map outline"
-          description={""}
+          description=""
           color="var(--color-accent-tertiary)"
         >
           {#if showBaseMapOutline}
@@ -149,7 +149,7 @@
         <ToggleOption
           bind:checked={forceShowStations}
           label="Stations"
-          description={""}
+          description=""
           color="var(--color-accent-secondary)"
         >
           <Circle
