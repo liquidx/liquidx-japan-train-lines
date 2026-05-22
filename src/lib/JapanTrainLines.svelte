@@ -109,7 +109,8 @@
 
     const screenCtm = mapLayer.getScreenCTM();
     const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations = forceShowStations || pixelsPerDegree > 800;
+    const showStations =
+      forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
     const adjustedStationRadius =
       (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
     for (const station of mapLayer.querySelectorAll(".station-dot")) {
@@ -172,13 +173,10 @@
     forceShowStations,
     stationSizeMultiplier,
   };
+
   $: if (viewerEl && mapTransform) {
     applyMapTransform();
   }
-
-  // World-coordinate zoom: screen pixels per degree of longitude.
-  // Increases as you zoom in, independent of SVG dimensions or region extents.
-  $: pixelsPerDegree = computePixelsPerDegree(mapInfo, zoom);
 
   const handleReset = () => {
     zoom = 1;
