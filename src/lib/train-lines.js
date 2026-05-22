@@ -21,16 +21,14 @@ export const joinSegments = (segments) => {
 
   let paths = [];
   let path = [];
-  let head = null;
-  let tail = null;
 
   if (true) {
     // Get the first segment.
     let firstSegment = remainingSegments.shift();
     let initialPoints = firstSegment.geometry.coordinates;
     path = path.concat(initialPoints);
-    head = initialPoints[0];
-    tail = initialPoints[initialPoints.length - 1];
+    let head = initialPoints[0];
+    let tail = initialPoints[initialPoints.length - 1];
 
     let lastRemainingCount = remainingSegments.length;
     while (remainingSegments.length > 0) {
