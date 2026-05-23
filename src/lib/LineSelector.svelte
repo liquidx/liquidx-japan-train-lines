@@ -48,6 +48,23 @@
 
   let collapsed = $state(true);
   let activePanel = $state("lines"); // "lines" | "appearance"
+  let expandedCompany = $state(null);
+
+  $effect(() => {
+    if (selectedCompany) {
+      expandedCompany = selectedCompany;
+    } else {
+      expandedCompany = null;
+    }
+  });
+
+  const handleCompanyClick = (companyName) => {
+    if (selectedCompany === companyName) {
+      expandedCompany = expandedCompany === companyName ? null : companyName;
+    } else {
+      onselectcompany?.(companyName);
+    }
+  };
 
   const linePrimaryName = (line) => {
     if (lineNameMapping[line] && lineNameMapping[line].ja) {
@@ -240,7 +257,7 @@
                   {selectedCompany === company.company
                   ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
                   : 'text-secondary hover:bg-[var(--color-surface-hover)]'}"
-                onclick={() => onselectcompany?.(company.company)}
+                onclick={() => handleCompanyClick(company.company)}
               >
                 <span class="flex flex-col min-w-0 truncate">
                   <span class="text-sm font-medium truncate"
@@ -255,7 +272,7 @@
                 <span class="flex items-center gap-1.5 shrink-0 ml-2">
                   <span class="text-xxs text-muted">{company.lines.length}</span
                   >
-                  {#if selectedCompany === company.company}
+                  {#if expandedCompany === company.company}
                     <ChevronUp size={14} class="text-muted" />
                   {:else}
                     <ChevronDown size={14} class="text-muted" />
@@ -263,7 +280,7 @@
                 </span>
               </button>
 
-              {#if selectedCompany === company.company}
+              {#if expandedCompany === company.company}
                 <div
                   class="bg-[var(--color-surface-soft)] px-3 py-2 grid grid-cols-2 gap-1.5"
                 >
