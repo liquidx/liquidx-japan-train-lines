@@ -16,6 +16,7 @@
     Scan,
     SlidersHorizontal,
     Sun,
+    List,
   } from "@lucide/svelte";
   import { companyNameMapping, lineNameMapping } from "$lib/line-name-mapping";
   import LineCell from "$lib/LineCell.svelte";
@@ -39,6 +40,7 @@
     forceShowStations = $bindable(false),
     stationSizeMultiplier = $bindable(1),
     showRegionPolygon = $bindable(false),
+    schematicMode = $bindable(false),
     onzoomIn,
     onzoomOut,
     onreset,
@@ -131,6 +133,18 @@
       <div
         class="flex items-center gap-0.5 pr-1.5 pl-1 border-l border-border h-7"
       >
+        <button
+          onclick={(e) => { e.stopPropagation(); schematicMode = !schematicMode; }}
+          title="Schematic View"
+          aria-label="Schematic View"
+          aria-pressed={schematicMode}
+          class="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-200
+            {schematicMode
+              ? 'bg-[var(--color-accent-primary-soft)] text-accent-primary'
+              : 'text-muted hover:bg-[var(--color-surface-hover)] hover:text-accent-secondary'}"
+        >
+          <List size={14} strokeWidth={2.5} />
+        </button>
         <button
           onclick={(e) => { e.stopPropagation(); onzoomIn?.(); }}
           title="Zoom In"

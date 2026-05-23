@@ -111,6 +111,29 @@ const hasCoordinateInBounds = (geometry, bounds) => {
   return false;
 };
 
+export const filterGeoJsonByBounds = (geojson, bounds, railroadGeojson) => {
+  const matchingLines = new Set();
+  const sourceGeojson = railroadGeojson || geojson;
+
+  for (const feature of sourceGeojson.features) {
+    const line_name = feature.properties?.["路線名"];
+    const company_name = feature.properties?.["運営会社"];
+    if (!line_name || !company_name) continue;
+
+    if (hasCoordinateInBounds(feature.geometry, bounds)) {
+      matchingLines.add(`${company_name}::${line_name}`);
+    }
+  }
+
+  const features = geojson.features.filter(feature => {
+    const line_name = feature.properties?.["路線名"];
+    const company_name = feature.properties?.["運営会社"];
+    return matchingLines.has(`${company_name}::${line_name}`);
+  });
+
+  return { features };
+};
+
 // _lineRegionIndex: "company::line" → string[] of region IDs, precomputed at build time.
 let _lineRegionIndex = null;
 
@@ -205,3 +228,8 @@ export const loadTrainLines = async ({ railroadGeoJsonUrl, stationGeoJsonUrl = n
       };
     });
 };
+
+export const getRegionsGeoJson = () => _regionsGeoJson;
+export const getRegionsStationGeoJson = () => _regionsStationGeoJson;
+export const getJapanOutlineGeoJson = () => _japanOutlineGeoJson;
+

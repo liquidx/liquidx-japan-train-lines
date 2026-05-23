@@ -2,9 +2,19 @@
 
 <script>
   import { onMount } from "svelte";
-  import { loadTrainLines, drawTrainLine } from "$lib/japan-train-lines.js";
-  import { stationNameMapping } from "$lib/line-name-mapping.js";
+  import { tweened } from "svelte/motion";
+  import { cubicInOut } from "svelte/easing";
+  import {
+    loadTrainLines,
+    getRegionsGeoJson,
+    getRegionsStationGeoJson,
+    getJapanOutlineGeoJson,
+  } from "$lib/japan-train-lines.js";
+  import { getTrainLinesLayout } from "$lib/train-line-layout.js";
+  import { getLineColor } from "$lib/line-colors.js";
+  import { stationNameMapping, companyNameMapping, lineNameMapping } from "$lib/line-name-mapping.js";
   import { regions as allRegions } from "$lib/regions.js";
+  import { joinSegments } from "$lib/train-lines.js";
   import LineSelector from "$lib/LineSelector.svelte";
 
   let {
@@ -14,7 +24,6 @@
     mapPadding = 0.05,
   } = $props();
 
-  let viewerEl = $state();
   let svgViewerEl = $state();
   let hoveredStation = $state(null);
   let regions = $state([]);
@@ -31,6 +40,10 @@
   let mapTheme = $state("dark");
   let showRegionPolygon = $state(false);
   let mapInfo = $state(null);
+  let schematicMode = $state(false);
+
+  // Prefectures polygons cache
+  let prefPolygons = $state(null);
 
   // Pan & Zoom State
   let zoom = $state(1);
@@ -66,7 +79,7 @@
     return Math.max(minStationRadius, Math.min(maxStationRadius, radius));
   };
 
-  const getSvgElement = () => viewerEl?.querySelector("svg");
+  const getSvgElement = () => svgViewerEl?.querySelector("svg");
 
   const clientPointToSvgPoint = (clientX, clientY) => {
     const svg = getSvgElement();
@@ -104,26 +117,23 @@
       ? (info.svgWidth / (info.bounds.max_x - info.bounds.min_x)) * currentZoom
       : 0;
 
-  const applyMapTransform = () => {
-    const mapLayer = viewerEl?.querySelector("[data-map-layer]");
-    if (!mapLayer) return;
+  // Transition Store
+  const transitionProgress = tweened(0, {
+    duration: 600,
+    easing: cubicInOut,
+  });
 
-    mapLayer.setAttribute(
-      "transform",
-      `translate(${panX} ${panY}) scale(${zoom})`,
-    );
+  let transitionFinished = $state(false);
 
-    const screenCtm = mapLayer.getScreenCTM();
-    const screenScale = screenCtm ? Math.hypot(screenCtm.a, screenCtm.b) : zoom;
-    const showStations =
-      forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800;
-    const adjustedStationRadius =
-      (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale;
-    for (const station of mapLayer.querySelectorAll(".station-dot")) {
-      station.setAttribute("r", adjustedStationRadius);
-      station.style.display = showStations ? "" : "none";
-    }
-  };
+  $effect(() => {
+    transitionFinished = false;
+    const target = schematicMode ? 1 : 0;
+    transitionProgress.set(target).then(() => {
+      if (schematicMode && target === 1) {
+        transitionFinished = true;
+      }
+    });
+  });
 
   onMount(async () => {
     let data = await loadTrainLines({
@@ -143,13 +153,18 @@
     if (urlCompany) selectedCompany = urlCompany;
     if (urlLine) selectedLine = urlLine;
 
-    // Apply the initial view for the starting region (unless a company/line is pre-selected from URL)
     if (!selectedCompany && !selectedLine) {
       regionViewPending = selectedRegion;
     }
 
     urlSyncReady = true;
     registerKeyboardShortcuts();
+
+    fetch("/prefecture-polygons.json")
+      .then((r) => r.json())
+      .then((data) => {
+        prefPolygons = data;
+      });
   });
 
   // Sync selection state to URL
@@ -166,19 +181,243 @@
     );
   });
 
-  // Redraw map when region, company, line, or display options change
+  // Layout Data Computations (Derived)
+  let activeGeoJson = $derived(
+    regions.length > 0 ? getRegionsGeoJson()[selectedRegion] : null
+  );
+  let activeStationGeoJson = $derived(
+    regions.length > 0 ? getRegionsStationGeoJson()[selectedRegion] : null
+  );
+  let japanOutlineGeoJson = $derived(
+    regions.length > 0 ? getJapanOutlineGeoJson() : null
+  );
+
+  let layoutData = $derived(
+    activeGeoJson ? getTrainLinesLayout(
+      activeGeoJson,
+      activeStationGeoJson,
+      selectedRegion,
+      selectedCompany,
+      selectedLine,
+      { padding: mapPadding }
+    ) : null
+  );
+
+  const max_dim = 640;
+  let bounds = $derived(layoutData?.bounds || { min_x: 130, max_x: 145, min_y: 30, max_y: 45 });
+  let mapWidth = $derived(bounds.max_x - bounds.min_x);
+  let mapHeight = $derived(bounds.max_y - bounds.min_y);
+
+  let svgWidth = $derived(
+    mapWidth > mapHeight
+      ? max_dim
+      : (max_dim / mapHeight) * mapWidth
+  );
+  let svgHeight = $derived(
+    mapWidth > mapHeight
+      ? (max_dim / mapWidth) * mapHeight
+      : max_dim
+  );
+
+  const projectX = (lng) => {
+    return ((lng - bounds.min_x) * svgWidth) / mapWidth;
+  };
+
+  const projectY = (lat) => {
+    return svgHeight - ((lat - bounds.min_y) * svgHeight) / mapHeight;
+  };
+
+  // Schematic Layout Settings
+  const rowHeight = 75;
+  const paddingTop = 40;
+  const paddingBottom = 60;
+  const paddingLeft = 190;
+  const paddingRight = 45;
+
+  let schematicHeight = $derived(
+    layoutData ? layoutData.lines.length * rowHeight + paddingTop + paddingBottom : 640
+  );
+
+  let currentSvgHeight = $derived(
+    svgHeight + (schematicHeight - svgHeight) * $transitionProgress
+  );
+
+  let viewBoxString = $derived(
+    `0 0 ${svgWidth} ${currentSvgHeight}`
+  );
+
+  // Derive final lines and paths coordinates
+  let renderedLines = $derived.by(() => {
+    if (!layoutData) return [];
+    
+    return layoutData.lines.map((line, lineIdx) => {
+      const ySchematic = lineIdx * rowHeight + rowHeight / 2 + paddingTop;
+      const innerWidth = svgWidth - paddingLeft - paddingRight;
+      
+      const paths = line.paths.map((path, pathIdx) => {
+        const coordinates = path.points.map((pt) => {
+          const geoX = projectX(pt.coord[0]);
+          const geoY = projectY(pt.coord[1]);
+          
+          const f = line.totalLength > 0 ? pt.distanceAlong / line.totalLength : 0.5;
+          const schX = paddingLeft + f * innerWidth;
+          const schY = ySchematic;
+          
+          const x = geoX + (schX - geoX) * $transitionProgress;
+          const y = geoY + (schY - geoY) * $transitionProgress;
+          
+          return [x, y];
+        });
+        
+        const d = coordinates.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt[0]},${pt[1]}`).join(' ');
+        
+        return {
+          id: `path-${line.key}-${pathIdx}`,
+          d
+        };
+      });
+      
+      const lineNameJa = lineNameMapping[line.line]?.ja || line.line;
+      const lineNameEn = lineNameMapping[line.line]?.en || line.line;
+      const companyNameEn = companyNameMapping[line.company]?.en || line.company;
+      
+      const color = getLineColor(line.company, line.line, mapTheme) || "var(--color-map-line-mono)";
+      
+      return {
+        key: line.key,
+        company: line.company,
+        line: line.line,
+        paths,
+        ySchematic,
+        displayNameJa: lineNameJa,
+        displayNameEn: companyNameEn ? `${companyNameEn} • ${lineNameEn}` : lineNameEn,
+        color
+      };
+    });
+  });
+
+  // Calculate reactive zoom scaling for stations
+  let screenScale = $derived(zoom);
+  let showStations = $derived(
+    forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800 || schematicMode
+  );
+  let adjustedStationRadius = $derived(
+    (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale
+  );
+
+  // Derive final stations list
+  let renderedStations = $derived.by(() => {
+    if (!layoutData) return [];
+    
+    return layoutData.stations.map((st) => {
+      const lineIdx = layoutData.lines.findIndex((l) => l.key === `${st.companyName}::${st.lineName}`);
+      if (lineIdx === -1) return null;
+      
+      const lineObj = renderedLines[lineIdx];
+      if (!lineObj) return null;
+      
+      const ySchematic = lineObj.ySchematic;
+      const innerWidth = svgWidth - paddingLeft - paddingRight;
+      
+      const geoX = projectX(st.coord[0]);
+      const geoY = projectY(st.coord[1]);
+      
+      let schX;
+      if (st.numStations > 1) {
+        schX = paddingLeft + (st.index / (st.numStations - 1)) * innerWidth;
+      } else {
+        schX = paddingLeft + innerWidth / 2;
+      }
+      const schY = ySchematic;
+      
+      const cx = geoX + (schX - geoX) * $transitionProgress;
+      const cy = geoY + (schY - geoY) * $transitionProgress;
+      
+      const color = showLineColors ? lineObj.color : "var(--color-map-line-mono)";
+      
+      return {
+        id: st.id,
+        name: st.name,
+        lineName: st.lineName,
+        companyName: st.companyName,
+        cx,
+        cy,
+        r: adjustedStationRadius,
+        color,
+        display: showStations ? "" : "none",
+        showLabel: $transitionProgress > 0.6
+      };
+    }).filter(Boolean);
+  });
+
+  // Japan Outline path data
+  let japanOutlinePathD = $derived.by(() => {
+    if (!japanOutlineGeoJson) return "";
+    const geometries = japanOutlineGeoJson.geometries || [];
+    const outlineSegments = geometries.map((geom) => ({ geometry: geom }));
+    const joined = joinSegments(outlineSegments);
+
+    let combined_d = "";
+    for (const feature of joined) {
+      let svg_points = "";
+      for (const point of feature.geometry.coordinates) {
+        const x = projectX(point[0]);
+        const y = projectY(point[1]);
+        if (!svg_points) {
+          svg_points += `M${x},${y} `;
+        } else {
+          svg_points += `L${x},${y} `;
+        }
+      }
+      if (svg_points) {
+        svg_points += "Z";
+        combined_d += svg_points + " ";
+      }
+    }
+    return combined_d.trim();
+  });
+
+  // Debug region polygon data
+  let debugPolygons = $derived.by(() => {
+    if (!showRegionPolygon || !prefPolygons || !mapInfo) return [];
+    
+    const region = allRegions.find((r) => r.id === selectedRegion);
+    if (!region?.prefectures) return [];
+    
+    const polygons = [];
+    
+    const projectRing = (ring) => {
+      return ring.map((pt) => {
+        const x = projectX(pt[0]);
+        const y = projectY(pt[1]);
+        return `${x},${y}`;
+      }).join(" ");
+    };
+    
+    for (const code of region.prefectures) {
+      const geom = prefPolygons[code];
+      if (!geom) continue;
+      if (geom.type === "Polygon") {
+        polygons.push({
+          points: projectRing(geom.coordinates[0])
+        });
+      } else if (geom.type === "MultiPolygon") {
+        geom.coordinates.forEach((poly) => {
+          polygons.push({
+            points: projectRing(poly[0])
+          });
+        });
+      }
+    }
+    
+    return polygons;
+  });
+
+  // Redraw map metadata on layout changes to sync panning bounds
   $effect(() => {
-    if (viewerEl && regions.length > 0) {
-      mapInfo = drawTrainLine(
-        selectedRegion,
-        selectedCompany,
-        selectedLine,
-        viewerEl,
-        640,
-        { showLineColors, showBaseMapOutline, mapTheme, padding: mapPadding },
-      );
-      // Apply the region's initialView once after a region change (non-reactive
-      // flag so reading it here doesn't add it as an effect dependency).
+    if (layoutData) {
+      mapInfo = { bounds, svgWidth, svgHeight };
+      
       const pending = regionViewPending;
       if (pending) {
         regionViewPending = null;
@@ -187,80 +426,18 @@
     }
   });
 
-  // Apply pan/zoom transform when any relevant state changes
-  $effect(() => {
-    // Explicitly track all dependencies that affect the transform
-    void [zoom, panX, panY, forceShowStations, stationSizeMultiplier, mapInfo];
-    if (viewerEl) applyMapTransform();
-  });
-
-  // Draw or remove the debug region polygon overlay (one path per prefecture)
-  $effect(() => {
-    const mapLayer = viewerEl?.querySelector("[data-map-layer]");
-    mapLayer
-      ?.querySelectorAll(".debug-region-polygon")
-      .forEach((el) => el.remove());
-    if (!showRegionPolygon || !mapInfo || !mapLayer) return;
-
-    const region = allRegions.find((r) => r.id === selectedRegion);
-    if (!region?.prefectures) return;
-
-    const { bounds, svgWidth, svgHeight } = mapInfo;
-
-    const project = ([lng, lat]) => {
-      const x =
-        ((lng - bounds.min_x) / (bounds.max_x - bounds.min_x)) * svgWidth;
-      const y =
-        svgHeight -
-        ((lat - bounds.min_y) / (bounds.max_y - bounds.min_y)) * svgHeight;
-      return `${x},${y}`;
-    };
-
-    const renderRing = (ring) => {
-      const el = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "polygon",
-      );
-      el.setAttribute("class", "debug-region-polygon");
-      el.setAttribute("points", ring.map(project).join(" "));
-      el.setAttribute("fill", "rgba(255,80,80,0.06)");
-      el.setAttribute("stroke", "rgba(255,80,80,0.8)");
-      el.setAttribute("stroke-width", "2");
-      el.setAttribute("stroke-dasharray", "10 5");
-      el.setAttribute("vector-effect", "non-scaling-stroke");
-      mapLayer.appendChild(el);
-    };
-
-    fetch("/prefecture-polygons.json")
-      .then((r) => r.json())
-      .then((prefPolygons) => {
-        for (const code of region.prefectures) {
-          const geom = prefPolygons[code];
-          if (!geom) continue;
-          if (geom.type === "Polygon") {
-            renderRing(geom.coordinates[0]);
-          } else if (geom.type === "MultiPolygon") {
-            geom.coordinates.forEach((poly) => renderRing(poly[0]));
-          }
-        }
-      });
-  });
-
   const handleReset = () => {
     zoom = 1;
     panX = 0;
     panY = 0;
   };
 
-  // Plain (non-reactive) flag: set before selectedRegion changes so the
-  // drawing effect can apply the region's initialView once after redraw.
   let regionViewPending = null;
 
   const applyRegionInitialView = (regionId, info) => {
     const region = allRegions.find((r) => r.id === regionId);
     if (region?.initialView && info) {
       const { center, zoom: targetZoom } = region.initialView;
-      // Project lat/lng to SVG user units (same formula as train-line-svg.js)
       const mx =
         ((center.lng - info.bounds.min_x) /
           (info.bounds.max_x - info.bounds.min_x)) *
@@ -270,7 +447,6 @@
         ((center.lat - info.bounds.min_y) /
           (info.bounds.max_y - info.bounds.min_y)) *
           info.svgHeight;
-      // SVG is CSS-centered, so viewport center = (svgWidth/2, svgHeight/2)
       zoom = targetZoom;
       panX = info.svgWidth / 2 - mx * targetZoom;
       panY = info.svgHeight / 2 - my * targetZoom;
@@ -295,12 +471,12 @@
   };
 
   const zoomIn = () => {
-    if (!viewerEl) return;
+    if (!svgViewerEl) return;
     zoomToPoint(getSvgViewportCenter(), 1.3);
   };
 
   const zoomOut = () => {
-    if (!viewerEl) return;
+    if (!svgViewerEl) return;
     zoomToPoint(getSvgViewportCenter(), 1 / 1.3);
   };
 
@@ -332,7 +508,7 @@
   };
 
   const handleMouseDown = (e) => {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return;
     if (e.target.closest(".hud-controls")) return;
 
     hoveredStation = null;
@@ -439,7 +615,7 @@
     trainCompanyNames = regionDataMap[selectedRegion] || [];
     selectedCompany = null;
     selectedLine = null;
-    handleReset(); // reset immediately; applyRegionInitialView overrides after redraw
+    handleReset();
   };
 
   const selectLine = (company, line) => {
@@ -525,7 +701,7 @@
   </header>
 
   <!-- Interactive Map Viewport -->
-  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- svelte-ignore a11y_mouse_events_have_key_events -->
   <div
     id="svg-viewer"
@@ -545,10 +721,148 @@
   >
     <div
       id="svg-content-wrapper"
-      bind:this={viewerEl}
       class="absolute top-0 left-0 w-full h-full flex items-center justify-center pointer-events-none"
       style="--zoom: {zoom};"
-    ></div>
+    >
+      {#if layoutData}
+        <svg
+          width="{svgWidth}px"
+          height="{currentSvgHeight}px"
+          viewBox={viewBoxString}
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          class="pointer-events-auto"
+        >
+          <g
+            data-map-layer
+            transform="translate({panX} {panY}) scale({zoom})"
+            fill="none"
+            fill-rule="evenodd"
+            stroke-linecap="square"
+            stroke-linejoin="square"
+          >
+            <!-- Japan land outline -->
+            {#if showBaseMapOutline && japanOutlinePathD && $transitionProgress < 0.95}
+              <path
+                class="japan-outline-path"
+                fill="var(--color-map-land-fill)"
+                stroke="var(--color-map-land-stroke)"
+                stroke-width="1"
+                vector-effect="non-scaling-stroke"
+                fill-rule="evenodd"
+                d={japanOutlinePathD}
+                style="opacity: {Math.max(0, Math.min(1, (0.2 - $transitionProgress) / 0.2))}; transition: opacity 0.15s;"
+              />
+            {/if}
+
+            <!-- Debug Region Polygon overlay -->
+            {#if showRegionPolygon && debugPolygons.length > 0 && $transitionProgress < 0.95}
+              {#each debugPolygons as poly}
+                <polygon
+                  class="debug-region-polygon"
+                  points={poly.points}
+                  fill="rgba(255,80,80,0.06)"
+                  stroke="rgba(255,80,80,0.8)"
+                  stroke-width="2"
+                  stroke-dasharray="10 5"
+                  vector-effect="non-scaling-stroke"
+                  style="opacity: {Math.max(0, Math.min(1, (0.2 - $transitionProgress) / 0.2))};"
+                />
+              {/each}
+            {/if}
+
+            <!-- Train Lines -->
+            {#each renderedLines as line (line.key)}
+              {#if $transitionProgress > 0.05}
+                <line
+                  x1={paddingLeft}
+                  y1={line.ySchematic}
+                  x2={svgWidth - paddingRight}
+                  y2={line.ySchematic}
+                  stroke={line.color}
+                  stroke-width={lineStrokeWidth}
+                  vector-effect="non-scaling-stroke"
+                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; pointer-events: none;"
+                />
+              {/if}
+              {#each line.paths as path, pathIdx}
+                <g class="segment">
+                  <path
+                    id={path.id}
+                    d={path.d}
+                    stroke={line.color}
+                    stroke-width={lineStrokeWidth}
+                    vector-effect="non-scaling-stroke"
+                  />
+                </g>
+              {/each}
+            {/each}
+
+            <!-- Stations -->
+            {#each renderedStations as station (station.id)}
+              <circle
+                id={station.id}
+                class="station-dot"
+                cx={station.cx}
+                cy={station.cy}
+                r={station.r}
+                fill={station.color}
+                stroke={station.color}
+                stroke-width="0.2"
+                vector-effect="non-scaling-stroke"
+                pointer-events="all"
+                data-station-name={station.name}
+                data-line-name={station.lineName}
+                data-company-name={station.companyName}
+                style="display: {station.display};"
+              />
+            {/each}
+
+            <!-- Station Names (Linear schematic only) -->
+            {#if $transitionProgress > 0.05}
+              {#each renderedStations as station (station.id)}
+                {#if station.showLabel && station.display !== "none"}
+                  <text
+                    class="station-label select-none pointer-events-none fill-secondary font-medium transition-opacity duration-300"
+                    x={station.cx}
+                    y={station.cy + 15}
+                    transform="rotate(45, {station.cx}, {station.cy + 15})"
+                    style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 10px; font-weight: 500;"
+                    text-anchor="start"
+                  >
+                    {station.name}
+                  </text>
+                {/if}
+              {/each}
+            {/if}
+
+            <!-- Company/Line name labels on the left of each row (Linear schematic only) -->
+            {#if $transitionProgress > 0.05}
+              {#each renderedLines as line (line.key)}
+                <text
+                  class="line-label select-none pointer-events-none fill-secondary font-bold transition-opacity duration-300"
+                  x={15}
+                  y={line.ySchematic - 2}
+                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 12px; font-weight: 700;"
+                  text-anchor="start"
+                >
+                  {line.displayNameJa}
+                </text>
+                <text
+                  class="line-label-sub select-none pointer-events-none fill-[var(--color-text-muted)] transition-opacity duration-300"
+                  x={15}
+                  y={line.ySchematic + 10}
+                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 9px;"
+                  text-anchor="start"
+                >
+                  {line.displayNameEn}
+                </text>
+              {/each}
+            {/if}
+          </g>
+        </svg>
+      {/if}
+    </div>
 
     <!-- HUD Overlay Controls -->
     <LineSelector
@@ -567,6 +881,7 @@
       bind:forceShowStations
       bind:stationSizeMultiplier
       bind:showRegionPolygon
+      bind:schematicMode
       onzoomIn={zoomIn}
       onzoomOut={zoomOut}
       onreset={handleReset}

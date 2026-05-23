@@ -482,4 +482,50 @@ describe("train-lines", () => {
       expect(stations).not.toContain("新宿");
     });
   });
+
+  describe("train-line-layout", () => {
+    it("should project a point on a line segment correctly", async () => {
+      const { projectPointOnSegment } = await import("../src/lib/train-line-layout.js");
+      const a = [0, 0];
+      const b = [10, 0];
+      const p = [5, 2];
+      const result = projectPointOnSegment(p, a, b);
+      expect(result.point).toEqual([5, 0]);
+      expect(result.t).toBe(0.5);
+      expect(result.dist2).toBe(4);
+    });
+
+    it("should order stations correctly along the line", async () => {
+      const { orderStationsAlongLine } = await import("../src/lib/train-line-layout.js");
+      const paths = [
+        {
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [0, 0],
+              [5, 0],
+              [10, 0]
+            ]
+          }
+        }
+      ];
+
+      const stations = [
+        {
+          properties: { "駅名": "Station B" },
+          geometry: { type: "Point", coordinates: [6, 0.1] }
+        },
+        {
+          properties: { "駅名": "Station A" },
+          geometry: { type: "Point", coordinates: [2, -0.1] }
+        }
+      ];
+
+      const ordered = orderStationsAlongLine(paths, stations);
+      expect(ordered.length).toBe(2);
+      expect(ordered[0].properties["駅名"]).toBe("Station A");
+      expect(ordered[1].properties["駅名"]).toBe("Station B");
+    });
+  });
 });
+

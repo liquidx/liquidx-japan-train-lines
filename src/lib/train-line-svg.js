@@ -33,7 +33,7 @@ const color_for_line = (company_name, line_name, options = {}) => {
   return lineColor;
 };
 
-const features_for_line = (
+export const features_for_line = (
   geojson,
   company_name,
   line_name
@@ -61,7 +61,7 @@ const features_for_line = (
   return features;
 };
 
-const segments_for_line = (
+export const segments_for_line = (
   geojson,
   company_name,
   line_name
@@ -105,7 +105,7 @@ const segments_for_line = (
   return joinedSegments;
 };
 
-const coordinates_for_feature = (feature) => {
+export const coordinates_for_feature = (feature) => {
   if (!feature?.geometry) {
     return [];
   }
@@ -125,7 +125,7 @@ const coordinates_for_feature = (feature) => {
   return [];
 };
 
-const point_for_feature = (feature) => {
+export const point_for_feature = (feature) => {
   let coordinates = coordinates_for_feature(feature);
   if (!coordinates.length) {
     return null;
@@ -138,7 +138,7 @@ const point_for_feature = (feature) => {
   return [total[0] / coordinates.length, total[1] / coordinates.length];
 };
 
-const bounding_box = (segments) => {
+export const bounding_box = (segments) => {
   let min_x, min_y, max_x, max_y;
   for (var i = 0; i < segments.length; i++) {
     let coordinates = segments[i]["geometry"]["coordinates"];
