@@ -246,68 +246,89 @@ export const getTrainLinesLayout = (
   }
 
   const linesList = [];
+  const computeSchematic = options.schematicMode ?? false;
+
   for (const key in lineGroups) {
     const group = lineGroups[key];
     const joined = joinSegments(group.segments);
     
-    // Stitch paths together ONLY for sequencing and relative distance mapping
-    const joinedCoords = joined.map((f) => f.geometry.coordinates);
-    const stitchedCoords = stitchPathsIntoSinglePath(joinedCoords);
-    const stitchedFeatures = stitchedCoords.map((coords) => ({
-      geometry: {
-        type: "LineString",
-        coordinates: coords
-      }
-    }));
+    let totalLength = 0;
+    let stitchedFeatures = [];
+    let paths = [];
 
-    // Precalculate cumulative distances along the stitched path
-    const stitchedPoints = [];
-    let stitchedLen = 0;
-    const sCoords = stitchedCoords[0] || [];
-    for (let i = 0; i < sCoords.length; i++) {
-      if (i > 0) {
-        stitchedLen += Math.hypot(sCoords[i][0] - sCoords[i - 1][0], sCoords[i][1] - sCoords[i - 1][1]);
-      }
-      stitchedPoints.push({
-        coord: sCoords[i],
-        dist: stitchedLen
-      });
-    }
-
-    const findDistInStitched = (coord) => {
-      let minDist = Infinity;
-      let matchedDist = 0;
-      for (const spt of stitchedPoints) {
-        const d = Math.hypot(spt.coord[0] - coord[0], spt.coord[1] - coord[1]);
-        if (d < minDist) {
-          minDist = d;
-          matchedDist = spt.dist;
+    if (computeSchematic) {
+      // Stitch paths together ONLY for sequencing and relative distance mapping
+      const joinedCoords = joined.map((f) => f.geometry.coordinates);
+      const stitchedCoords = stitchPathsIntoSinglePath(joinedCoords);
+      stitchedFeatures = stitchedCoords.map((coords) => ({
+        geometry: {
+          type: "LineString",
+          coordinates: coords
         }
-      }
-      return matchedDist;
-    };
+      }));
 
-    // Map original paths with correct distances along the stitched line
-    const paths = joined.map((f) => {
-      const coords = f.geometry.coordinates;
-      const points = coords.map((c) => {
+      // Precalculate cumulative distances along the stitched path
+      const stitchedPoints = [];
+      let stitchedLen = 0;
+      const sCoords = stitchedCoords[0] || [];
+      for (let i = 0; i < sCoords.length; i++) {
+        if (i > 0) {
+          stitchedLen += Math.hypot(sCoords[i][0] - sCoords[i - 1][0], sCoords[i][1] - sCoords[i - 1][1]);
+        }
+        stitchedPoints.push({
+          coord: sCoords[i],
+          dist: stitchedLen
+        });
+      }
+      totalLength = stitchedLen;
+
+      const findDistInStitched = (coord) => {
+        let minDist = Infinity;
+        let matchedDist = 0;
+        for (const spt of stitchedPoints) {
+          const d = Math.hypot(spt.coord[0] - coord[0], spt.coord[1] - coord[1]);
+          if (d < minDist) {
+            minDist = d;
+            matchedDist = spt.dist;
+          }
+        }
+        return matchedDist;
+      };
+
+      // Map original paths with correct distances along the stitched line
+      paths = joined.map((f) => {
+        const coords = f.geometry.coordinates;
+        const points = coords.map((c) => {
+          return {
+            coord: c,
+            distanceAlong: findDistInStitched(c)
+          };
+        });
+        
         return {
-          coord: c,
-          distanceAlong: findDistInStitched(c)
+          points
         };
       });
-      
-      return {
-        points
-      };
-    });
+    } else {
+      // Fast path when schematicMode is false
+      paths = joined.map((f) => {
+        const coords = f.geometry.coordinates;
+        const points = coords.map((c) => {
+          return {
+            coord: c,
+            distanceAlong: 0
+          };
+        });
+        return { points };
+      });
+    }
 
     linesList.push({
       key,
       company: group.company,
       line: group.line,
       paths,
-      totalLength: stitchedLen,
+      totalLength,
       stitchedFeatures
     });
   }
@@ -336,10 +357,15 @@ export const getTrainLinesLayout = (
   // Order stations along their lines
   const finalStations = [];
   linesList.forEach((line) => {
-    const joinedPaths = line.stitchedFeatures;
-    
     const lineStations = stationGroups[line.key] || [];
-    const orderedStFeatures = orderStationsAlongLine(joinedPaths, lineStations);
+    let orderedStFeatures;
+
+    if (computeSchematic) {
+      const joinedPaths = line.stitchedFeatures;
+      orderedStFeatures = orderStationsAlongLine(joinedPaths, lineStations);
+    } else {
+      orderedStFeatures = lineStations;
+    }
     
     const orderedStations = orderedStFeatures.map((st, index) => {
       const coord = point_for_feature(st);

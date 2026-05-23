@@ -199,7 +199,7 @@
       selectedRegion,
       selectedCompany,
       selectedLine,
-      { padding: mapPadding }
+      { padding: mapPadding, schematicMode }
     ) : null
   );
 

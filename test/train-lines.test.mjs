@@ -526,6 +526,92 @@ describe("train-lines", () => {
       expect(ordered[0].properties["駅名"]).toBe("Station A");
       expect(ordered[1].properties["駅名"]).toBe("Station B");
     });
+
+    it("should process getTrainLinesLayout with and without schematicMode option correctly", async () => {
+      const { getTrainLinesLayout } = await import("../src/lib/train-line-layout.js");
+      const geojson = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄"
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [0, 0],
+                [10, 0]
+              ]
+            }
+          }
+        ]
+      };
+
+      const stationGeojson = {
+        features: [
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄",
+              "駅名": "Station B"
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [6, 0]
+            }
+          },
+          {
+            properties: {
+              "路線名": "銀座線",
+              "運営会社": "東京地下鉄",
+              "駅名": "Station A"
+            },
+            geometry: {
+              type: "Point",
+              coordinates: [2, 0]
+            }
+          }
+        ]
+      };
+
+      // 1. Without schematicMode (computeSchematic: false)
+      const layoutDefault = getTrainLinesLayout(
+        geojson,
+        stationGeojson,
+        null,
+        "東京地下鉄",
+        "銀座線",
+        { schematicMode: false }
+      );
+
+      expect(layoutDefault.lines.length).toBe(1);
+      expect(layoutDefault.lines[0].totalLength).toBe(0);
+      expect(layoutDefault.lines[0].paths[0].points[0].distanceAlong).toBe(0);
+      
+      // Stations should be in their original input order (Station B first, Station A second)
+      expect(layoutDefault.stations.length).toBe(2);
+      expect(layoutDefault.stations[0].name).toBe("Station B");
+      expect(layoutDefault.stations[1].name).toBe("Station A");
+
+      // 2. With schematicMode (computeSchematic: true)
+      const layoutSchematic = getTrainLinesLayout(
+        geojson,
+        stationGeojson,
+        null,
+        "東京地下鉄",
+        "銀座線",
+        { schematicMode: true }
+      );
+
+      expect(layoutSchematic.lines.length).toBe(1);
+      expect(layoutSchematic.lines[0].totalLength).toBeGreaterThan(0);
+      expect(layoutSchematic.lines[0].paths[0].points[1].distanceAlong).toBeGreaterThan(0);
+      
+      // Stations should be ordered (Station A at 2,0 first, Station B at 6,0 second)
+      expect(layoutSchematic.stations.length).toBe(2);
+      expect(layoutSchematic.stations[0].name).toBe("Station A");
+      expect(layoutSchematic.stations[1].name).toBe("Station B");
+    });
   });
 });
 
