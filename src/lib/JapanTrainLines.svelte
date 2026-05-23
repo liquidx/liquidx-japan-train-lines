@@ -279,7 +279,6 @@
       
       const lineNameJa = lineNameMapping[line.line]?.ja || line.line;
       const lineNameEn = lineNameMapping[line.line]?.en || line.line;
-      const companyNameEn = companyNameMapping[line.company]?.en || line.company;
       
       const color = getLineColor(line.company, line.line, mapTheme) || "var(--color-map-line-mono)";
       
@@ -290,7 +289,7 @@
         paths,
         ySchematic,
         displayNameJa: lineNameJa,
-        displayNameEn: companyNameEn ? `${companyNameEn} • ${lineNameEn}` : lineNameEn,
+        displayNameEn: lineNameEn,
         color
       };
     });
@@ -827,7 +826,7 @@
                     x={station.cx}
                     y={station.cy + 15}
                     transform="rotate(45, {station.cx}, {station.cy + 15})"
-                    style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 10px; font-weight: 500;"
+                    style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 8px; font-weight: 500;"
                     text-anchor="start"
                   >
                     {station.name}
