@@ -1,6 +1,10 @@
 <script>
   import "../app.css";
   import JapanTrainLines from "$lib/JapanTrainLines.svelte";
+import { dev } from '$app/environment';
+import { injectAnalytics } from '@vercel/analytics/sveltekit';
+
+injectAnalytics({ mode: dev ? 'development' : 'production' });
 
   let geojsonUrl = "/N02-19_RailroadSection.geojson";
   let stationGeojsonUrl = "/N02-19_Station.geojson";

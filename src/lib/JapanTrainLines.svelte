@@ -12,10 +12,15 @@
   } from "$lib/japan-train-lines.js";
   import { getTrainLinesLayout } from "$lib/train-line-layout.js";
   import { getLineColor } from "$lib/line-colors.js";
-  import { stationNameMapping, companyNameMapping, lineNameMapping } from "$lib/line-name-mapping.js";
+  import {
+    stationNameMapping,
+    companyNameMapping,
+    lineNameMapping,
+  } from "$lib/line-name-mapping.js";
   import { regions as allRegions } from "$lib/regions.js";
   import { joinSegments } from "$lib/train-lines.js";
   import LineSelector from "$lib/LineSelector.svelte";
+  import { replaceState } from "$app/navigation";
 
   let {
     railroadGeoJsonUrl = "/railroad.geojson",
@@ -174,49 +179,45 @@
     params.set("region", selectedRegion);
     if (selectedCompany) params.set("company", selectedCompany);
     if (selectedLine) params.set("line", selectedLine);
-    window.history.replaceState(
-      {},
-      "",
-      `${window.location.pathname}?${params}`,
-    );
+    replaceState(`${window.location.pathname}?${params}`);
   });
 
   // Layout Data Computations (Derived)
   let activeGeoJson = $derived(
-    regions.length > 0 ? getRegionsGeoJson()[selectedRegion] : null
+    regions.length > 0 ? getRegionsGeoJson()[selectedRegion] : null,
   );
   let activeStationGeoJson = $derived(
-    regions.length > 0 ? getRegionsStationGeoJson()[selectedRegion] : null
+    regions.length > 0 ? getRegionsStationGeoJson()[selectedRegion] : null,
   );
   let japanOutlineGeoJson = $derived(
-    regions.length > 0 ? getJapanOutlineGeoJson() : null
+    regions.length > 0 ? getJapanOutlineGeoJson() : null,
   );
 
   let layoutData = $derived(
-    activeGeoJson ? getTrainLinesLayout(
-      activeGeoJson,
-      activeStationGeoJson,
-      selectedRegion,
-      selectedCompany,
-      selectedLine,
-      { padding: mapPadding, schematicMode }
-    ) : null
+    activeGeoJson
+      ? getTrainLinesLayout(
+          activeGeoJson,
+          activeStationGeoJson,
+          selectedRegion,
+          selectedCompany,
+          selectedLine,
+          { padding: mapPadding, schematicMode },
+        )
+      : null,
   );
 
   const max_dim = 640;
-  let bounds = $derived(layoutData?.bounds || { min_x: 130, max_x: 145, min_y: 30, max_y: 45 });
+  let bounds = $derived(
+    layoutData?.bounds || { min_x: 130, max_x: 145, min_y: 30, max_y: 45 },
+  );
   let mapWidth = $derived(bounds.max_x - bounds.min_x);
   let mapHeight = $derived(bounds.max_y - bounds.min_y);
 
   let svgWidth = $derived(
-    mapWidth > mapHeight
-      ? max_dim
-      : (max_dim / mapHeight) * mapWidth
+    mapWidth > mapHeight ? max_dim : (max_dim / mapHeight) * mapWidth,
   );
   let svgHeight = $derived(
-    mapWidth > mapHeight
-      ? (max_dim / mapWidth) * mapHeight
-      : max_dim
+    mapWidth > mapHeight ? (max_dim / mapWidth) * mapHeight : max_dim,
   );
 
   const projectX = (lng) => {
@@ -235,53 +236,58 @@
   const paddingRight = 45;
 
   let schematicHeight = $derived(
-    layoutData ? layoutData.lines.length * rowHeight + paddingTop + paddingBottom : 640
+    layoutData
+      ? layoutData.lines.length * rowHeight + paddingTop + paddingBottom
+      : 640,
   );
 
   let currentSvgHeight = $derived(
-    svgHeight + (schematicHeight - svgHeight) * $transitionProgress
+    svgHeight + (schematicHeight - svgHeight) * $transitionProgress,
   );
 
-  let viewBoxString = $derived(
-    `0 0 ${svgWidth} ${currentSvgHeight}`
-  );
+  let viewBoxString = $derived(`0 0 ${svgWidth} ${currentSvgHeight}`);
 
   // Derive final lines and paths coordinates
   let renderedLines = $derived.by(() => {
     if (!layoutData) return [];
-    
+
     return layoutData.lines.map((line, lineIdx) => {
       const ySchematic = lineIdx * rowHeight + rowHeight / 2 + paddingTop;
       const innerWidth = svgWidth - paddingLeft - paddingRight;
-      
+
       const paths = line.paths.map((path, pathIdx) => {
         const coordinates = path.points.map((pt) => {
           const geoX = projectX(pt.coord[0]);
           const geoY = projectY(pt.coord[1]);
-          
-          const f = line.totalLength > 0 ? pt.distanceAlong / line.totalLength : 0.5;
+
+          const f =
+            line.totalLength > 0 ? pt.distanceAlong / line.totalLength : 0.5;
           const schX = paddingLeft + f * innerWidth;
           const schY = ySchematic;
-          
+
           const x = geoX + (schX - geoX) * $transitionProgress;
           const y = geoY + (schY - geoY) * $transitionProgress;
-          
+
           return [x, y];
         });
-        
-        const d = coordinates.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt[0]},${pt[1]}`).join(' ');
-        
+
+        const d = coordinates
+          .map((pt, idx) => `${idx === 0 ? "M" : "L"}${pt[0]},${pt[1]}`)
+          .join(" ");
+
         return {
           id: `path-${line.key}-${pathIdx}`,
-          d
+          d,
         };
       });
-      
+
       const lineNameJa = lineNameMapping[line.line]?.ja || line.line;
       const lineNameEn = lineNameMapping[line.line]?.en || line.line;
-      
-      const color = getLineColor(line.company, line.line, mapTheme) || "var(--color-map-line-mono)";
-      
+
+      const color =
+        getLineColor(line.company, line.line, mapTheme) ||
+        "var(--color-map-line-mono)";
+
       return {
         key: line.key,
         company: line.company,
@@ -290,7 +296,7 @@
         ySchematic,
         displayNameJa: lineNameJa,
         displayNameEn: lineNameEn,
-        color
+        color,
       };
     });
   });
@@ -298,55 +304,63 @@
   // Calculate reactive zoom scaling for stations
   let screenScale = $derived(zoom);
   let showStations = $derived(
-    forceShowStations || computePixelsPerDegree(mapInfo, zoom) > 800 || schematicMode
+    forceShowStations ||
+      computePixelsPerDegree(mapInfo, zoom) > 800 ||
+      schematicMode,
   );
   let adjustedStationRadius = $derived(
-    (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale
+    (stationRadiusForZoom(zoom) * stationSizeMultiplier) / screenScale,
   );
 
   // Derive final stations list
   let renderedStations = $derived.by(() => {
     if (!layoutData) return [];
-    
-    return layoutData.stations.map((st) => {
-      const lineIdx = layoutData.lines.findIndex((l) => l.key === `${st.companyName}::${st.lineName}`);
-      if (lineIdx === -1) return null;
-      
-      const lineObj = renderedLines[lineIdx];
-      if (!lineObj) return null;
-      
-      const ySchematic = lineObj.ySchematic;
-      const innerWidth = svgWidth - paddingLeft - paddingRight;
-      
-      const geoX = projectX(st.coord[0]);
-      const geoY = projectY(st.coord[1]);
-      
-      let schX;
-      if (st.numStations > 1) {
-        schX = paddingLeft + (st.index / (st.numStations - 1)) * innerWidth;
-      } else {
-        schX = paddingLeft + innerWidth / 2;
-      }
-      const schY = ySchematic;
-      
-      const cx = geoX + (schX - geoX) * $transitionProgress;
-      const cy = geoY + (schY - geoY) * $transitionProgress;
-      
-      const color = showLineColors ? lineObj.color : "var(--color-map-line-mono)";
-      
-      return {
-        id: st.id,
-        name: st.name,
-        lineName: st.lineName,
-        companyName: st.companyName,
-        cx,
-        cy,
-        r: adjustedStationRadius,
-        color,
-        display: showStations ? "" : "none",
-        showLabel: $transitionProgress > 0.6
-      };
-    }).filter(Boolean);
+
+    return layoutData.stations
+      .map((st) => {
+        const lineIdx = layoutData.lines.findIndex(
+          (l) => l.key === `${st.companyName}::${st.lineName}`,
+        );
+        if (lineIdx === -1) return null;
+
+        const lineObj = renderedLines[lineIdx];
+        if (!lineObj) return null;
+
+        const ySchematic = lineObj.ySchematic;
+        const innerWidth = svgWidth - paddingLeft - paddingRight;
+
+        const geoX = projectX(st.coord[0]);
+        const geoY = projectY(st.coord[1]);
+
+        let schX;
+        if (st.numStations > 1) {
+          schX = paddingLeft + (st.index / (st.numStations - 1)) * innerWidth;
+        } else {
+          schX = paddingLeft + innerWidth / 2;
+        }
+        const schY = ySchematic;
+
+        const cx = geoX + (schX - geoX) * $transitionProgress;
+        const cy = geoY + (schY - geoY) * $transitionProgress;
+
+        const color = showLineColors
+          ? lineObj.color
+          : "var(--color-map-line-mono)";
+
+        return {
+          id: st.id,
+          name: st.name,
+          lineName: st.lineName,
+          companyName: st.companyName,
+          cx,
+          cy,
+          r: adjustedStationRadius,
+          color,
+          display: showStations ? "" : "none",
+          showLabel: $transitionProgress > 0.6,
+        };
+      })
+      .filter(Boolean);
   });
 
   // Japan Outline path data
@@ -379,36 +393,38 @@
   // Debug region polygon data
   let debugPolygons = $derived.by(() => {
     if (!showRegionPolygon || !prefPolygons || !mapInfo) return [];
-    
+
     const region = allRegions.find((r) => r.id === selectedRegion);
     if (!region?.prefectures) return [];
-    
+
     const polygons = [];
-    
+
     const projectRing = (ring) => {
-      return ring.map((pt) => {
-        const x = projectX(pt[0]);
-        const y = projectY(pt[1]);
-        return `${x},${y}`;
-      }).join(" ");
+      return ring
+        .map((pt) => {
+          const x = projectX(pt[0]);
+          const y = projectY(pt[1]);
+          return `${x},${y}`;
+        })
+        .join(" ");
     };
-    
+
     for (const code of region.prefectures) {
       const geom = prefPolygons[code];
       if (!geom) continue;
       if (geom.type === "Polygon") {
         polygons.push({
-          points: projectRing(geom.coordinates[0])
+          points: projectRing(geom.coordinates[0]),
         });
       } else if (geom.type === "MultiPolygon") {
         geom.coordinates.forEach((poly) => {
           polygons.push({
-            points: projectRing(poly[0])
+            points: projectRing(poly[0]),
           });
         });
       }
     }
-    
+
     return polygons;
   });
 
@@ -416,7 +432,7 @@
   $effect(() => {
     if (layoutData) {
       mapInfo = { bounds, svgWidth, svgHeight };
-      
+
       const pending = regionViewPending;
       if (pending) {
         regionViewPending = null;
@@ -595,7 +611,9 @@
     } else if (e.touches.length === 2) {
       const [t1, t2] = [e.touches[0], e.touches[1]];
       const newDist = getTouchDistance(t1, t2);
-      const newZoom = clampZoom(initialPinchZoom * (newDist / initialPinchDistance));
+      const newZoom = clampZoom(
+        initialPinchZoom * (newDist / initialPinchDistance),
+      );
       panX = initialPinchSvgX - initialPinchMapX * newZoom;
       panY = initialPinchSvgY - initialPinchMapY * newZoom;
       zoom = newZoom;
@@ -750,7 +768,10 @@
                 vector-effect="non-scaling-stroke"
                 fill-rule="evenodd"
                 d={japanOutlinePathD}
-                style="opacity: {Math.max(0, Math.min(1, (0.2 - $transitionProgress) / 0.2))}; transition: opacity 0.15s;"
+                style="opacity: {Math.max(
+                  0,
+                  Math.min(1, (0.2 - $transitionProgress) / 0.2),
+                )}; transition: opacity 0.15s;"
               />
             {/if}
 
@@ -765,7 +786,10 @@
                   stroke-width="2"
                   stroke-dasharray="10 5"
                   vector-effect="non-scaling-stroke"
-                  style="opacity: {Math.max(0, Math.min(1, (0.2 - $transitionProgress) / 0.2))};"
+                  style="opacity: {Math.max(
+                    0,
+                    Math.min(1, (0.2 - $transitionProgress) / 0.2),
+                  )};"
                 />
               {/each}
             {/if}
@@ -781,7 +805,9 @@
                   stroke={line.color}
                   stroke-width={lineStrokeWidth}
                   vector-effect="non-scaling-stroke"
-                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; pointer-events: none;"
+                  style="opacity: {transitionFinished
+                    ? 1
+                    : 0}; transition: opacity 0.25s; pointer-events: none;"
                 />
               {/if}
               {#each line.paths as path, pathIdx}
@@ -826,7 +852,9 @@
                     x={station.cx}
                     y={station.cy + 15}
                     transform="rotate(45, {station.cx}, {station.cy + 15})"
-                    style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 8px; font-weight: 500;"
+                    style="opacity: {transitionFinished
+                      ? 1
+                      : 0}; transition: opacity 0.25s; font-size: 8px; font-weight: 500;"
                     text-anchor="start"
                   >
                     {station.name}
@@ -842,7 +870,9 @@
                   class="line-label select-none pointer-events-none fill-secondary font-bold transition-opacity duration-300"
                   x={15}
                   y={line.ySchematic - 2}
-                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 12px; font-weight: 700;"
+                  style="opacity: {transitionFinished
+                    ? 1
+                    : 0}; transition: opacity 0.25s; font-size: 12px; font-weight: 700;"
                   text-anchor="start"
                 >
                   {line.displayNameJa}
@@ -851,7 +881,9 @@
                   class="line-label-sub select-none pointer-events-none fill-[var(--color-text-muted)] transition-opacity duration-300"
                   x={15}
                   y={line.ySchematic + 10}
-                  style="opacity: {transitionFinished ? 1 : 0}; transition: opacity 0.25s; font-size: 9px;"
+                  style="opacity: {transitionFinished
+                    ? 1
+                    : 0}; transition: opacity 0.25s; font-size: 9px;"
                   text-anchor="start"
                 >
                   {line.displayNameEn}
