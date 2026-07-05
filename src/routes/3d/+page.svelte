@@ -27,11 +27,8 @@
 </script>
 
 <svelte:head>
-  <title>Japan Train Lines — Tokyo 3D (v2) | liquidx.net</title>
-  <meta
-    name="description"
-    content="Experimental 3D map of the Tokyo rail network with animated trains"
-  />
+  <title>Japan Train Lines - 3D | liquidx.net</title>
+  <meta name="description" content="Interactive train line maps for Japan" />
 </svelte:head>
 
 {#if error}
