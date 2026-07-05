@@ -35,12 +35,19 @@
   let clockSec = $state(7.5 * 3600);
   let trainCount = $state(0);
   let showTrains = $state(true);
+  let styleGlow = $state(false);
   let autoRotate = $state(false);
   let showPillars = $state(true);
   let showGrid = $state(true);
   let labelTier = $state("major"); // none | major | all
-  let panelOpen = $state(true);
-  let stats = $state(null);
+  let forceShowStations = $state(false);
+  let stationSizeMultiplier = $state(1);
+
+  // Zoom-dependent station visibility, mirroring v1: stations appear only
+  // past a screen-density threshold (px per scene-meter at the orbit target),
+  // unless forced on from the appearance tab.
+  const STATION_SHOW_PX_PER_M = 0.045;
+  const TRAIN_BASE_PX_PER_M = 0.032; // px/m at the default bird view
 
   const SPEEDS = [1, 60, 120, 300, 600];
   const FALLBACK_COLOR = "#7c8db0";
@@ -63,13 +70,37 @@
     return new THREE.CanvasTexture(c);
   };
 
-  const dotTexture = () => {
+  // Station marker: white disc with a dark rim (classic transit-map look).
+  const stationTexture = () => {
     const c = document.createElement("canvas");
     c.width = c.height = 32;
     const ctx = c.getContext("2d");
-    ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(16, 16, 12, 0, Math.PI * 2);
+    ctx.arc(16, 16, 13, 0, Math.PI * 2);
+    ctx.fillStyle = "#0a0f1c";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(16, 16, 9, 0, Math.PI * 2);
+    ctx.fillStyle = "#e8f0ff";
+    ctx.fill();
+    return new THREE.CanvasTexture(c);
+  };
+
+  // Train marker: solid dot in a darker shade of the line's color with a
+  // thin white rim, so it reads as a vehicle and stays visible on top of its
+  // own line. The rim is deliberately thin — at small point sizes a thick
+  // rim swamps the fill and the dot reads as white.
+  const trainTexture = (colorCss) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 32;
+    const ctx = c.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(16, 16, 15, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(16, 16, 12.5, 0, Math.PI * 2);
+    ctx.fillStyle = colorCss;
     ctx.fill();
     return new THREE.CanvasTexture(c);
   };
@@ -87,8 +118,10 @@
 
     // Same Tokyo network definition as the v1 map.
     const tokyoRails = getTokyoGeoJson(railroadGeoJson).features;
-    const tokyoStations = getTokyoGeoJson(stationGeoJson, railroadGeoJson)
-      .features;
+    const tokyoStations = getTokyoGeoJson(
+      stationGeoJson,
+      railroadGeoJson,
+    ).features;
 
     // Clip to the scene radius: matched lines can run far beyond Tokyo
     // (Tokaido, Utsunomiya, ...).
@@ -124,7 +157,12 @@
         color: getLineColor(company, line, "dark") || FALLBACK_COLOR,
         depth: depthForLine(company, line),
       };
-      const model = buildLineModel(meta, rails, stationsByKey.get(key) || [], project);
+      const model = buildLineModel(
+        meta,
+        rails,
+        stationsByKey.get(key) || [],
+        project,
+      );
       if (model) models.push(model);
     }
 
@@ -135,7 +173,7 @@
       byCompany.get(m.meta.company).push(m.meta.line);
     }
     const companies = [...byCompany.keys()].sort(
-      (a, b) => byCompany.get(b).length - byCompany.get(a).length
+      (a, b) => byCompany.get(b).length - byCompany.get(a).length,
     );
     const ordered = [
       ...PRIORITY_COMPANIES.filter((c) => byCompany.has(c)),
@@ -152,18 +190,6 @@
     for (const m of models)
       for (const st of m.stations)
         nameCount.set(st.name, (nameCount.get(st.name) || 0) + 1);
-
-    let deepest = null;
-    let highest = null;
-    for (const m of models)
-      for (const st of m.stations) {
-        if (st.s === null) continue;
-        if (!deepest || st.y < deepest.y)
-          deepest = { name: st.name, y: st.y, line: m.meta.line };
-        if (!highest || st.y > highest.y)
-          highest = { name: st.name, y: st.y, line: m.meta.line };
-      }
-    stats = { deepest, highest };
 
     // ---- three.js scene ----
     const scene = new THREE.Scene();
@@ -193,7 +219,7 @@
         opacity: 0.55,
         depthWrite: false,
         side: THREE.DoubleSide,
-      })
+      }),
     );
     plane.rotation.x = -Math.PI / 2;
     plane.renderOrder = 1;
@@ -204,7 +230,7 @@
     scene.add(depthGroup);
 
     const glow = glowTexture();
-    const dot = dotTexture();
+    const stationDot = stationTexture();
     const lineMaterials = [];
     const perLine = new Map(); // key -> {group, trains, ...}
 
@@ -212,11 +238,12 @@
       const meta = model.meta;
       const color = new THREE.Color(meta.color);
       const group = new THREE.Group();
+      const halos = [];
 
       for (const path of model.paths) {
         const geom = new LineGeometry();
         geom.setPositions(Array.from(path.positions));
-        const core = new LineMaterial({ color, linewidth: 2 });
+        const core = new LineMaterial({ color, linewidth: 2.5 });
         const halo = new LineMaterial({
           color,
           linewidth: 7,
@@ -229,9 +256,11 @@
         const coreLine = new Line2(geom, core);
         const haloLine = new Line2(geom, halo);
         haloLine.renderOrder = 2;
+        haloLine.visible = styleGlow;
         coreLine.computeLineDistances();
         haloLine.computeLineDistances();
         group.add(coreLine, haloLine);
+        halos.push(haloLine);
       }
 
       const stPos = [];
@@ -242,19 +271,20 @@
       const stGeom = new THREE.BufferGeometry();
       stGeom.setAttribute(
         "position",
-        new THREE.Float32BufferAttribute(stPos, 3)
+        new THREE.Float32BufferAttribute(stPos, 3),
       );
       const stations = new THREE.Points(
         stGeom,
         new THREE.PointsMaterial({
-          color: 0xe8f0ff,
-          size: 3.5,
+          // Tints the white disc of the station texture to the line color;
+          // the dark rim stays dark.
+          color,
+          size: 5.5,
           sizeAttenuation: false,
-          map: dot,
+          map: stationDot,
           transparent: true,
-          opacity: 0.65,
           depthWrite: false,
-        })
+        }),
       );
       stations.renderOrder = 3;
       group.add(stations);
@@ -268,7 +298,7 @@
       const pillarGeom = new THREE.BufferGeometry();
       pillarGeom.setAttribute(
         "position",
-        new THREE.Float32BufferAttribute(pillarPos, 3)
+        new THREE.Float32BufferAttribute(pillarPos, 3),
       );
       const pillars = new THREE.LineSegments(
         pillarGeom,
@@ -277,7 +307,7 @@
           transparent: true,
           opacity: 0.12,
           depthWrite: false,
-        })
+        }),
       );
       group.add(pillars);
 
@@ -288,17 +318,30 @@
       attr.setUsage(THREE.DynamicDrawUsage);
       trainGeom.setAttribute("position", attr);
       trainGeom.setDrawRange(0, 0);
+      const trainGlowMat = new THREE.PointsMaterial({
+        color: color.clone().lerp(new THREE.Color(0xffffff), 0.35),
+        size: 12,
+        sizeAttenuation: false,
+        map: glow,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const trainSolidMat = new THREE.PointsMaterial({
+        color: color.clone(),
+        size: 9,
+        sizeAttenuation: false,
+        map: trainTexture(
+          "#" +
+            color.clone().lerp(new THREE.Color(0x000000), 0.3).getHexString(),
+        ),
+        // Hard cutout instead of alpha blending: blending the sprite's
+        // antialiased edges over the bright line beneath washed the color out.
+        alphaTest: 0.5,
+      });
       const trains = new THREE.Points(
         trainGeom,
-        new THREE.PointsMaterial({
-          color: color.clone().lerp(new THREE.Color(0xffffff), 0.35),
-          size: 12,
-          sizeAttenuation: false,
-          map: glow,
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        })
+        styleGlow ? trainGlowMat : trainSolidMat,
       );
       trains.renderOrder = 4;
       trains.frustumCulled = false;
@@ -311,6 +354,10 @@
         trains,
         trainGeom,
         trainArr,
+        trainGlowMat,
+        trainSolidMat,
+        halos,
+        stations,
         pillars,
         cap,
       });
@@ -356,7 +403,7 @@
     const rulerGeom = new THREE.BufferGeometry();
     rulerGeom.setAttribute(
       "position",
-      new THREE.Float32BufferAttribute(rulerPos, 3)
+      new THREE.Float32BufferAttribute(rulerPos, 3),
     );
     ruler.add(
       new THREE.LineSegments(
@@ -365,8 +412,8 @@
           color: 0x5b76a8,
           transparent: true,
           opacity: 0.5,
-        })
-      )
+        }),
+      ),
     );
     depthGroup.add(ruler);
 
@@ -438,6 +485,29 @@
       }
       trainCount = total;
 
+      // Zoom-dependent station visibility and marker sizing (v1-style):
+      // px per scene-meter at the orbit target stands in for v1's
+      // pixels-per-degree density.
+      const dist = t.camera.position.distanceTo(t.controls.target);
+      const pxPerM =
+        t.labelLayer.height /
+        (2 * dist * Math.tan((t.camera.fov * Math.PI) / 360));
+      const stationsOn = forceShowStations || pxPerM > STATION_SHOW_PX_PER_M;
+      const stationSize =
+        7 *
+        Math.min(4, Math.max(0.7, Math.sqrt(pxPerM / STATION_SHOW_PX_PER_M))) *
+        stationSizeMultiplier;
+      const trainSize = Math.min(
+        6,
+        Math.max(5, 7 * Math.pow(pxPerM / TRAIN_BASE_PX_PER_M, 0.4)),
+      );
+      for (const entry of t.perLine.values()) {
+        entry.stations.visible = stationsOn;
+        entry.stations.material.size = stationSize;
+        entry.trainSolidMat.size = trainSize;
+        entry.trainGlowMat.size = trainSize + 3;
+      }
+
       t.controls.update();
       t.renderer.render(t.scene, t.camera);
 
@@ -479,6 +549,15 @@
     three.controls.autoRotateSpeed = 0.6;
     for (const entry of three.perLine.values()) {
       entry.pillars.visible = showPillars;
+    }
+  });
+  $effect(() => {
+    if (!three) return;
+    for (const entry of three.perLine.values()) {
+      for (const halo of entry.halos) halo.visible = styleGlow;
+      entry.trains.material = styleGlow
+        ? entry.trainGlowMat
+        : entry.trainSolidMat;
     }
   });
 
@@ -543,52 +622,100 @@
     onzoomIn={() => zoomBy(0.8)}
     onzoomOut={() => zoomBy(1.25)}
     onreset={() => setCamera("bird")}
-  />
-
-  <header class="hud header">
-    <div class="title">
-      <span class="t1">JAPAN</span><span class="t2">TRAIN LINES</span>
-      <span class="sub">日本鉄道路線図 — 東京 3D・合成ダイヤ運行 (experimental)</span>
-    </div>
-    {#if stats}
-      <div class="stats">
-        <div>
-          MAX DEPTH <b>{Math.round(stats.deepest.y)}m</b>
-          <span>{stats.deepest.name} ({stats.deepest.line})</span>
+  >
+    {#snippet footer()}
+      <div class="v2-timeline">
+        <div class="tl-row">
+          <button class="play" onclick={() => (playing = !playing)}>
+            {playing ? "❚❚" : "▶"}
+          </button>
+          <div class="clock">{formatClock(clockSec)}</div>
+          <input
+            class="scrubber"
+            type="range"
+            min={SERVICE_START}
+            max={SERVICE_END}
+            step="60"
+            value={clockSec}
+            oninput={scrub}
+          />
+          <div class="running">
+            <b>{Math.round(trainCount)}</b><span>運行中</span>
+          </div>
         </div>
-        <div>
-          MAX HEIGHT <b>+{Math.round(stats.highest.y)}m</b>
-          <span>{stats.highest.name} ({stats.highest.line})</span>
+        <div class="tl-row speeds">
+          {#each SPEEDS as s (s)}
+            <button class:active={speed === s} onclick={() => (speed = s)}
+              >×{s}</button
+            >
+          {/each}
         </div>
       </div>
-    {/if}
-  </header>
+    {/snippet}
 
-  <aside class="hud panel" class:closed={!panelOpen}>
-    <button class="panel-toggle" onclick={() => (panelOpen = !panelOpen)}>
-      {panelOpen ? "×" : "3D"}
-    </button>
-    {#if panelOpen}
-      <div class="panel-body">
+    {#snippet appearanceExtra()}
+      <div class="v2-appearance">
         <div class="section-title">DEPTH 深さ表現</div>
         <div class="slider-row">
           <span>強調倍率</span>
-          <input type="range" min="1" max="40" step="1" bind:value={exaggeration} />
+          <input
+            type="range"
+            min="1"
+            max="40"
+            step="1"
+            bind:value={exaggeration}
+          />
           <b>×{exaggeration}</b>
         </div>
 
         <div class="section-title">LABELS 駅名表示</div>
         <div class="seg">
-          <button class:active={labelTier === "none"} onclick={() => (labelTier = "none")}>なし</button>
-          <button class:active={labelTier === "major"} onclick={() => (labelTier = "major")}>主要駅</button>
-          <button class:active={labelTier === "all"} onclick={() => (labelTier = "all")}>全駅</button>
+          <button
+            class:active={labelTier === "none"}
+            onclick={() => (labelTier = "none")}>なし</button
+          >
+          <button
+            class:active={labelTier === "major"}
+            onclick={() => (labelTier = "major")}>主要駅</button
+          >
+          <button
+            class:active={labelTier === "all"}
+            onclick={() => (labelTier = "all")}>全駅</button
+          >
+        </div>
+
+        <div class="section-title">STATIONS 駅表示</div>
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={forceShowStations} /> ズームに関係なく表示</label
+        >
+        <div class="slider-row">
+          <span>サイズ</span>
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.1"
+            bind:value={stationSizeMultiplier}
+          />
+          <b>×{stationSizeMultiplier.toFixed(1)}</b>
         </div>
 
         <div class="section-title">DISPLAY 表示</div>
-        <label class="toggle-row"><input type="checkbox" bind:checked={showTrains} /> 列車の運行</label>
-        <label class="toggle-row"><input type="checkbox" bind:checked={autoRotate} /> 自動回転</label>
-        <label class="toggle-row"><input type="checkbox" bind:checked={showPillars} /> 模型支柱（地上との接続）</label>
-        <label class="toggle-row"><input type="checkbox" bind:checked={showGrid} /> 地上グリッド</label>
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={showTrains} /> 列車の運行</label
+        >
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={styleGlow} /> グロー効果</label
+        >
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={autoRotate} /> 自動回転</label
+        >
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={showPillars} /> 模型支柱（地上との接続）</label
+        >
+        <label class="toggle-row"
+          ><input type="checkbox" bind:checked={showGrid} /> 地上グリッド</label
+        >
 
         <div class="section-title">CAMERA 視点</div>
         <div class="cam-grid">
@@ -599,36 +726,12 @@
         </div>
 
         <div class="footnote">
-          深さは概算値（実測データではありません）。ダイヤは合成。
-          データ: 国土数値情報 (N02-19)
+          深さは概算値（実測データではありません）。ダイヤは合成。 データ:
+          国土数値情報 (N02-19)
         </div>
       </div>
-    {/if}
-  </aside>
-
-  <div class="hud playbar">
-    <button class="play" onclick={() => (playing = !playing)}>
-      {playing ? "❚❚" : "▶"}
-    </button>
-    <div class="clock">{formatClock(clockSec)}</div>
-    <input
-      class="scrubber"
-      type="range"
-      min={SERVICE_START}
-      max={SERVICE_END}
-      step="60"
-      value={clockSec}
-      oninput={scrub}
-    />
-    <div class="speeds">
-      {#each SPEEDS as s (s)}
-        <button class:active={speed === s} onclick={() => (speed = s)}>×{s}</button>
-      {/each}
-    </div>
-    <div class="running">
-      <b>{Math.round(trainCount)}</b><span>運行中</span>
-    </div>
-  </div>
+    {/snippet}
+  </LineSelector>
 </div>
 
 <style>
@@ -637,8 +740,8 @@
     inset: 0;
     background: #04060c;
     color: #dbe4f5;
-    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo,
-      sans-serif;
+    font-family:
+      "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     overflow: hidden;
   }
   .viewport {
@@ -657,86 +760,10 @@
     pointer-events: none;
   }
 
-  .hud {
-    position: absolute;
-    z-index: 10;
-  }
-
-  /* Header (top-right, leaves top-left to the LineSelector) */
-  .header {
-    top: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-    padding: 16px 20px;
-    pointer-events: none;
-    text-align: right;
-  }
-  .title .t1 {
-    font-weight: 800;
-    letter-spacing: 0.35em;
-    font-size: 16px;
-    color: #f4f7ff;
-  }
-  .title .t2 {
-    font-weight: 800;
-    letter-spacing: 0.35em;
-    font-size: 16px;
-    color: #4da3ff;
-    margin-left: 10px;
-  }
-  .title .sub {
-    display: block;
-    margin-top: 4px;
-    font-size: 10px;
-    color: #7484a3;
-    letter-spacing: 0.15em;
-  }
-  .stats {
-    text-align: right;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    color: #7484a3;
-  }
-  .stats b {
-    color: #4da3ff;
-    font-size: 11px;
-  }
-  .stats span {
-    color: #aab8d4;
-    margin-left: 6px;
-  }
-
-  /* Right-side 3D controls panel */
-  .panel {
-    top: 110px;
-    right: 16px;
-    max-height: calc(100% - 220px);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-  .panel-toggle {
-    background: rgba(13, 20, 38, 0.85);
-    color: #aab8d4;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    padding: 4px 10px;
-    cursor: pointer;
-  }
-  .panel-body {
-    margin-top: 6px;
-    width: 210px;
-    overflow-y: auto;
-    background: rgba(10, 15, 30, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 10px;
+  /* 3D controls inside the LineSelector appearance tab */
+  .v2-appearance {
     padding: 12px;
-    backdrop-filter: blur(8px);
+    overflow-y: auto;
   }
   .section-title {
     font-size: 9px;
@@ -815,50 +842,51 @@
     color: #4a587a;
   }
 
-  /* Bottom playback bar */
-  .playbar {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 16px;
+  /* Timeline row inside the LineSelector panel (visible when collapsed) */
+  .v2-timeline {
+    border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: none;
+  }
+  .tl-row {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: rgba(10, 15, 30, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
-    padding: 10px 16px;
-    backdrop-filter: blur(8px);
-    width: min(760px, calc(100% - 32px));
+    gap: 8px;
   }
   .play {
     background: none;
     border: none;
     color: #eaf2ff;
-    font-size: 14px;
+    font-size: 11px;
     cursor: pointer;
-    width: 28px;
+    width: 22px;
+    flex: none;
   }
   .clock {
-    font-size: 22px;
+    font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: #f4f7ff;
-    min-width: 74px;
+    min-width: 44px;
   }
   .scrubber {
     flex: 1;
+    min-width: 0;
     accent-color: #4da3ff;
   }
   .speeds {
-    display: flex;
     gap: 4px;
   }
   .speeds button {
+    flex: 1;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #8fa1c4;
     font-size: 10px;
-    padding: 4px 7px;
+    padding: 3px 0;
     border-radius: 6px;
     cursor: pointer;
   }
@@ -867,31 +895,19 @@
     color: #eaf2ff;
   }
   .running {
-    text-align: center;
-    min-width: 52px;
+    text-align: right;
+    flex: none;
   }
   .running b {
     display: block;
     color: #ffb144;
-    font-size: 18px;
+    font-size: 12px;
+    line-height: 1.1;
     font-variant-numeric: tabular-nums;
   }
   .running span {
-    font-size: 9px;
+    font-size: 8px;
     color: #5c6c8f;
-    letter-spacing: 0.15em;
-  }
-
-  @media (max-width: 720px) {
-    .stats {
-      display: none;
-    }
-    .panel-body {
-      width: 180px;
-    }
-    .clock {
-      font-size: 16px;
-      min-width: 56px;
-    }
+    letter-spacing: 0.12em;
   }
 </style>

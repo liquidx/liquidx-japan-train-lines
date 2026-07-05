@@ -44,6 +44,10 @@
     onzoomIn,
     onzoomOut,
     onreset,
+    // Optional snippets: `footer` renders below the header bar (visible even
+    // when collapsed); `appearanceExtra` replaces the appearance tab content.
+    footer = null,
+    appearanceExtra = null,
   } = $props();
 
   let collapsed = $state(true);
@@ -189,6 +193,8 @@
       </div>
     </div>
 
+    {@render footer?.()}
+
     {#if !collapsed}
       <!-- Tab switcher -->
       <div
@@ -304,6 +310,9 @@
       <div
         class="{activePanel === 'appearance' ? 'flex' : 'hidden'} flex-col flex-1 overflow-y-auto scrollbar-thin"
       >
+        {#if appearanceExtra}
+          {@render appearanceExtra()}
+        {:else}
         <div class="p-2">
           <!-- Theme toggle -->
           <div
@@ -419,6 +428,7 @@
             </ToggleOption>
           </div>
         </div>
+        {/if}
       </div>
     {/if}
   </div>
