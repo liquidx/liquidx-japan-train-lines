@@ -47,7 +47,7 @@
     "tailwindcss": "^4.3.0",
     "three": "^0.185.1",
     "vite": "^8.0.13",
-    "vitest": "^3.0.5"
+    "vitest": "^3.2.6"
   },
   "type": "module",
   "dependencies": {
