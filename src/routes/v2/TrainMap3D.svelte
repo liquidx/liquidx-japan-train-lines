@@ -12,7 +12,8 @@
   import { LabelLayer } from "./labels.js";
   import { getTokyoGeoJson } from "$lib/japan-train-lines.js";
   import { getLineColor } from "$lib/line-colors.js";
-  import { TOKYO_CENTER, CLIP_RADIUS_M, depthForLine } from "./depth-config.js";
+  import { regions } from "$lib/regions.js";
+  import { CLIP_RADIUS_M, depthForLine } from "./depth-config.js";
   import { makeProjector, buildLineModel, pointAt } from "./geo.js";
   import {
     trainsAt,
@@ -22,9 +23,11 @@
     SERVICE_END,
   } from "./schedule.js";
 
-  let { railroadGeoJson, stationGeoJson } = $props();
+  let { railroadGeoJson, stationGeoJson, lineRegionIndex = null } = $props();
 
   // ---- UI state ----
+  let selectedRegion = $state("tokyo");
+  let regionBuilding = $state(false);
   let selectedCompany = $state(null);
   let selectedLine = $state(null);
   let companyList = $state([]);
@@ -113,33 +116,205 @@
       : meta.company === selectedCompany &&
         (!selectedLine || meta.line === selectedLine);
 
-  const buildScene = () => {
-    const project = makeProjector(TOKYO_CENTER);
+  // Region slice of a GeoJSON, mirroring v1's loadTrainLines caches:
+  // "japan" = everything, "tokyo" = the special allowlist filter, other
+  // regions = precomputed line-region-index lookup.
+  const regionFeatures = (geojson, region) => {
+    if (region.id === "japan") return geojson.features;
+    if (region.id === "tokyo")
+      return getTokyoGeoJson(geojson, railroadGeoJson).features;
+    return geojson.features.filter((f) => {
+      const line = f.properties?.["路線名"];
+      const company = f.properties?.["運営会社"];
+      if (!line || !company) return false;
+      return (
+        lineRegionIndex?.[`${company}::${line}`]?.includes(region.id) ?? false
+      );
+    });
+  };
 
-    // Same Tokyo network definition as the v1 map.
-    const tokyoRails = getTokyoGeoJson(railroadGeoJson).features;
-    const tokyoStations = getTokyoGeoJson(
-      stationGeoJson,
-      railroadGeoJson,
-    ).features;
+  // One-time three.js setup: renderer, camera, controls, label canvas.
+  // Everything region-specific lives under `regionRoot` and is rebuilt by
+  // buildRegion().
+  const initThree = () => {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x04060c);
 
-    // Clip to the scene radius: matched lines can run far beyond Tokyo
-    // (Tokaido, Utsunomiya, ...).
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(50, 1, 10, 300000);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI * 0.95;
+
+    const labelLayer = new LabelLayer(labelCanvas);
+
+    const t = {
+      scene,
+      renderer,
+      camera,
+      controls,
+      labelLayer,
+      regionRoot: null,
+      depthGroup: null,
+      grid: null,
+      plane: null,
+      perLine: new Map(),
+      lineMaterials: [],
+      regionScale: 40000,
+      viewport: { w: 1, h: 1 },
+      camAnim: null,
+    };
+    // Grabbing the controls cancels any in-flight camera animation.
+    controls.addEventListener("start", () => {
+      t.camAnim = null;
+    });
+    return t;
+  };
+
+  // Animate the camera to a new position/target over ~0.7s.
+  const flyTo = (toPos, toTgt, instant = false) => {
+    const { camera, controls } = three;
+    if (instant) {
+      three.camAnim = null;
+      camera.position.copy(toPos);
+      controls.target.copy(toTgt);
+      return;
+    }
+    three.camAnim = {
+      start: performance.now(),
+      dur: 700,
+      fromPos: camera.position.clone(),
+      fromTgt: controls.target.clone(),
+      toPos,
+      toTgt,
+    };
+  };
+
+  // Frame the currently visible lines at the current orbit direction, close
+  // enough to fill the view but never farther than the whole-region view.
+  // Centered on the median of the visible stations with a 95th-percentile
+  // radius, so one long tail (e.g. a line running far out of the city)
+  // doesn't drag the framing off the network's core.
+  const fitToVisible = () => {
+    const { camera, controls } = three;
+    const xs = [];
+    const zs = [];
+    for (const entry of three.perLine.values()) {
+      if (!isEntryVisible(entry.model.meta)) continue;
+      for (const st of entry.model.stations) {
+        if (st.s === null) continue;
+        xs.push(st.x);
+        zs.push(st.z);
+      }
+      if (entry.model.stations.length === 0) {
+        // Rare: a line with no matched stations — sample path vertices.
+        const p = entry.model.paths[entry.model.mainPath].positions;
+        for (let i = 0; i < p.length; i += 30) {
+          xs.push(p[i]);
+          zs.push(p[i + 2]);
+        }
+      }
+    }
+    if (xs.length === 0) return;
+
+    const sortedX = [...xs].sort((a, b) => a - b);
+    const sortedZ = [...zs].sort((a, b) => a - b);
+    const cx = sortedX[Math.floor(sortedX.length / 2)];
+    const cz = sortedZ[Math.floor(sortedZ.length / 2)];
+    const dists = xs
+      .map((x, i) => Math.hypot(x - cx, zs[i] - cz))
+      .sort((a, b) => a - b);
+    const r = Math.max(1500, dists[Math.floor(dists.length * 0.95)]);
+    const vfov = (camera.fov * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+    const dist = Math.max(
+      4000,
+      Math.min(
+        3 * three.regionScale,
+        (r * 1.2) / Math.tan(Math.min(vfov, hfov) / 2),
+      ),
+    );
+    // Keep the current orbit direction, but not too flat.
+    const dir = camera.position.clone().sub(controls.target);
+    if (dir.lengthSq() < 1) dir.set(0, 0.475, 0.625);
+    dir.normalize();
+    if (dir.y < 0.3) {
+      dir.y = 0.3;
+      dir.normalize();
+    }
+    flyTo(
+      new THREE.Vector3(cx + dir.x * dist, dir.y * dist, cz + dir.z * dist),
+      new THREE.Vector3(cx, 0, cz),
+    );
+  };
+
+  const disposeRegion = () => {
+    if (!three.regionRoot) return;
+    three.regionRoot.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        const mats = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
+        for (const m of mats) {
+          if (m.map) m.map.dispose();
+          m.dispose();
+        }
+      }
+    });
+    three.scene.remove(three.regionRoot);
+    three.regionRoot = null;
+    three.perLine = new Map();
+    three.lineMaterials = [];
+    three.labelLayer.stations = [];
+    three.labelLayer.rulers = [];
+  };
+
+  // Re-apply the current UI state to freshly built scene objects (the
+  // $effects below only rerun when the state itself changes).
+  const applyDisplayState = () => {
+    three.grid.visible = showGrid;
+    three.depthGroup.scale.y = exaggeration;
+    for (const entry of three.perLine.values()) {
+      entry.group.visible = isEntryVisible(entry.model.meta);
+      entry.pillars.visible = showPillars;
+      for (const halo of entry.halos) halo.visible = styleGlow;
+      entry.trains.material = styleGlow
+        ? entry.trainGlowMat
+        : entry.trainSolidMat;
+    }
+  };
+
+  const buildRegion = (regionId) => {
+    const region = regions.find((r) => r.id === regionId) || regions[0];
+    const center = region.initialView.center;
+    const project = makeProjector({ lon: center.lng, lat: center.lat });
+
+    const rails = regionFeatures(railroadGeoJson, region);
+    const stationFeats = regionFeatures(stationGeoJson, region);
+
+    // Tokyo additionally clips to a fixed radius: its allowlisted lines run
+    // far beyond the city (Tokaido, Utsunomiya, ...).
     const withinRadius = (f) =>
+      region.id !== "tokyo" ||
       f.geometry.coordinates.some(([lon, lat]) => {
         const [x, z] = project(lon, lat);
         return Math.hypot(x, z) < CLIP_RADIUS_M;
       });
 
     const railByKey = new Map();
-    for (const f of tokyoRails) {
+    for (const f of rails) {
       if (!withinRadius(f)) continue;
       const key = `${f.properties["運営会社"]}::${f.properties["路線名"]}`;
       if (!railByKey.has(key)) railByKey.set(key, []);
       railByKey.get(key).push(f);
     }
     const stationsByKey = new Map();
-    for (const f of tokyoStations) {
+    for (const f of stationFeats) {
       if (!withinRadius(f)) continue;
       const key = `${f.properties["運営会社"]}::${f.properties["路線名"]}`;
       if (!stationsByKey.has(key)) stationsByKey.set(key, []);
@@ -191,28 +366,33 @@
       for (const st of m.stations)
         nameCount.set(st.name, (nameCount.get(st.name) || 0) + 1);
 
-    // ---- three.js scene ----
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x04060c);
-    scene.fog = new THREE.Fog(0x04060c, 45000, 140000);
+    // Scene scale: fit to the 95th percentile of station distances from the
+    // region center. Index-matched lines can run far outside the region
+    // (shinkansen); the fog hides those tails instead of clipping them.
+    const stationDists = [];
+    for (const m of models)
+      for (const st of m.stations)
+        if (st.s !== null) stationDists.push(Math.hypot(st.x, st.z));
+    stationDists.sort((a, b) => a - b);
+    const p95 = stationDists[Math.floor(stationDists.length * 0.95)] || 40000;
+    const R = Math.max(30000, p95 * 1.15);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
+    // ---- rebuild the region's scene graph ----
+    disposeRegion();
+    const regionRoot = new THREE.Group();
+    three.scene.add(regionRoot);
+    three.regionRoot = regionRoot;
+    three.regionScale = R;
+    three.scene.fog = new THREE.Fog(0x04060c, 1.15 * R, 3.5 * R);
+    three.camera.far = Math.max(300000, 10 * R);
+    three.camera.updateProjectionMatrix();
 
-    const camera = new THREE.PerspectiveCamera(50, 1, 10, 300000);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.maxPolarAngle = Math.PI * 0.95;
-    camera.position.set(0, 19000, 25000);
-    controls.target.set(0, 0, -1500);
-
-    const grid = new THREE.GridHelper(84000, 84, 0x1a2a52, 0x0b1226);
+    const grid = new THREE.GridHelper(2.1 * R, 84, 0x1a2a52, 0x0b1226);
     grid.position.y = -2;
-    scene.add(grid);
+    regionRoot.add(grid);
+    three.grid = grid;
     const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(84000, 84000),
+      new THREE.PlaneGeometry(2.1 * R, 2.1 * R),
       new THREE.MeshBasicMaterial({
         color: 0x070b16,
         transparent: true,
@@ -223,16 +403,18 @@
     );
     plane.rotation.x = -Math.PI / 2;
     plane.renderOrder = 1;
-    scene.add(plane);
+    regionRoot.add(plane);
+    three.plane = plane;
 
     const depthGroup = new THREE.Group();
     depthGroup.scale.y = exaggeration;
-    scene.add(depthGroup);
+    regionRoot.add(depthGroup);
+    three.depthGroup = depthGroup;
 
     const glow = glowTexture();
     const stationDot = stationTexture();
-    const lineMaterials = [];
-    const perLine = new Map(); // key -> {group, trains, ...}
+    const lineMaterials = three.lineMaterials;
+    const perLine = three.perLine; // key -> {group, trains, ...}
 
     for (const model of models) {
       const meta = model.meta;
@@ -365,7 +547,7 @@
 
     // Station labels, deduped by name across all lines, drawn on a 2D
     // canvas overlay (see labels.js) instead of per-station DOM nodes.
-    const labelLayer = new LabelLayer(labelCanvas);
+    const labelLayer = three.labelLayer;
     const labeled = new Map();
     for (const model of models) {
       for (const st of model.stations) {
@@ -389,7 +571,7 @@
 
     // Depth ruler at the east edge.
     const ruler = new THREE.Group();
-    const rulerX = 26000;
+    const rulerX = 0.65 * R;
     const rulerPos = [rulerX, -50, 0, rulerX, 20, 0];
     for (let d = -50; d <= 20; d += 10) {
       rulerPos.push(rulerX - 300, d, 0, rulerX + 300, d, 0);
@@ -417,22 +599,28 @@
     );
     depthGroup.add(ruler);
 
-    return {
-      scene,
-      renderer,
-      camera,
-      controls,
-      depthGroup,
-      grid,
-      plane,
-      perLine,
-      labelLayer,
-      lineMaterials,
-    };
+    for (const m of lineMaterials)
+      m.resolution.set(three.viewport.w, three.viewport.h);
+
+    applyDisplayState();
+    setCamera("bird", true);
+  };
+
+  const selectRegion = (id) => {
+    if (!three || id === selectedRegion || regionBuilding) return;
+    selectedRegion = id;
+    selectedCompany = null;
+    selectedLine = null;
+    regionBuilding = true;
+    // Let the loading overlay paint before the synchronous rebuild.
+    setTimeout(() => {
+      buildRegion(id);
+      regionBuilding = false;
+    }, 30);
   };
 
   onMount(() => {
-    three = buildScene();
+    three = initThree();
     const t = three;
     const pos = [0, 0, 0];
     if (import.meta.env.DEV) window.__v2three = t;
@@ -440,6 +628,7 @@
     const resize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
+      t.viewport = { w, h };
       t.renderer.setSize(w, h);
       t.labelLayer.resize(w, h, Math.min(window.devicePixelRatio, 2));
       t.camera.aspect = w / h;
@@ -447,6 +636,7 @@
       for (const m of t.lineMaterials) m.resolution.set(w, h);
     };
     resize();
+    buildRegion(selectedRegion);
     const ro = new ResizeObserver(resize);
     ro.observe(container);
 
@@ -461,6 +651,16 @@
         let c = clockSec + dt * speed;
         if (c > SERVICE_END) c = SERVICE_START;
         clockSec = c;
+      }
+
+      // Camera fly-to animation.
+      if (t.camAnim) {
+        const a = t.camAnim;
+        const k = Math.min(1, (now - a.start) / a.dur);
+        const e = k * k * (3 - 2 * k);
+        t.camera.position.lerpVectors(a.fromPos, a.toPos, e);
+        t.controls.target.lerpVectors(a.fromTgt, a.toTgt, e);
+        if (k >= 1) t.camAnim = null;
       }
 
       let total = 0;
@@ -538,12 +738,27 @@
       entry.group.visible = isEntryVisible(entry.model.meta);
     }
   });
+
+  // Refit the camera whenever the visible-line selection changes: frame the
+  // selected company/line network, or return to the region overview.
+  let lastFitKey = "";
   $effect(() => {
-    if (!three) return;
+    const key = `${selectedRegion}|${selectedCompany ?? ""}|${selectedLine ?? ""}`;
+    if (!three || regionBuilding) {
+      lastFitKey = key;
+      return;
+    }
+    if (key === lastFitKey) return;
+    lastFitKey = key;
+    if (selectedCompany) fitToVisible();
+    else setCamera("bird");
+  });
+  $effect(() => {
+    if (!three?.depthGroup) return;
     three.depthGroup.scale.y = exaggeration;
   });
   $effect(() => {
-    if (!three) return;
+    if (!three?.grid) return;
     three.grid.visible = showGrid;
     three.controls.autoRotate = autoRotate;
     three.controls.autoRotateSpeed = 0.6;
@@ -561,22 +776,26 @@
     }
   });
 
-  const setCamera = (preset) => {
+  // Camera presets scale with the region's fitted radius.
+  const setCamera = (preset, instant = false) => {
     if (!three) return;
-    const { camera, controls } = three;
+    const { regionScale: R } = three;
+    let pos = null;
+    let tgt = null;
     if (preset === "bird") {
-      camera.position.set(0, 19000, 25000);
-      controls.target.set(0, 0, -1500);
+      pos = new THREE.Vector3(0, 0.475 * R, 0.625 * R);
+      tgt = new THREE.Vector3(0, 0, -0.0375 * R);
     } else if (preset === "top") {
-      camera.position.set(0, 48000, 10);
-      controls.target.set(0, 0, 0);
+      pos = new THREE.Vector3(0, 1.2 * R, 1);
+      tgt = new THREE.Vector3(0, 0, 0);
     } else if (preset === "side") {
-      camera.position.set(1000, 1200, 34000);
-      controls.target.set(0, -300, 0);
+      pos = new THREE.Vector3(0.025 * R, 0.03 * R, 0.85 * R);
+      tgt = new THREE.Vector3(0, -300, 0);
     } else if (preset === "below") {
-      camera.position.set(8000, -14000, 16000);
-      controls.target.set(0, 0, 0);
+      pos = new THREE.Vector3(0.2 * R, -0.35 * R, 0.4 * R);
+      tgt = new THREE.Vector3(0, 0, 0);
     }
+    if (pos) flyTo(pos, tgt, instant);
   };
 
   const zoomBy = (factor) => {
@@ -598,15 +817,19 @@
     <canvas class="label-canvas" bind:this={labelCanvas}></canvas>
   </div>
 
+  {#if regionBuilding}
+    <div class="region-loading">路線データを構築中…</div>
+  {/if}
+
   <!-- Line/company selector reused from the v1 map -->
   <LineSelector
-    regions={[{ id: "tokyo", name: "Tokyo", nameJa: "東京" }]}
-    selectedRegion="tokyo"
+    {regions}
+    {selectedRegion}
     trainCompanyNames={companyList}
     {selectedCompany}
     {selectedLine}
     bind:mapTheme
-    onselectregion={() => {}}
+    onselectregion={selectRegion}
     onselectcompany={(company) => {
       selectedCompany = company;
       selectedLine = null;
@@ -757,6 +980,19 @@
     width: 100%;
     height: 100%;
     z-index: 2;
+    pointer-events: none;
+  }
+  .region-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 6, 12, 0.55);
+    color: #8fa1c4;
+    font-size: 12px;
+    letter-spacing: 0.25em;
     pointer-events: none;
   }
 

@@ -7,16 +7,19 @@
 
   let railroadGeoJson = $state(null);
   let stationGeoJson = $state(null);
+  let lineRegionIndex = $state(null);
   let error = $state(null);
 
   onMount(async () => {
     try {
-      const [rail, stations] = await Promise.all([
+      const [rail, stations, index] = await Promise.all([
         fetch("/N02-19_RailroadSection.geojson").then((r) => r.json()),
         fetch("/N02-19_Station.geojson").then((r) => r.json()),
+        fetch("/line-region-index.json").then((r) => r.json()),
       ]);
       railroadGeoJson = rail;
       stationGeoJson = stations;
+      lineRegionIndex = index;
     } catch (e) {
       error = String(e);
     }
@@ -33,8 +36,8 @@
 
 {#if error}
   <div class="loading">Failed to load data: {error}</div>
-{:else if railroadGeoJson && stationGeoJson}
-  <TrainMap3D {railroadGeoJson} {stationGeoJson} />
+{:else if railroadGeoJson && stationGeoJson && lineRegionIndex}
+  <TrainMap3D {railroadGeoJson} {stationGeoJson} {lineRegionIndex} />
 {:else}
   <div class="loading">Loading railway data…</div>
 {/if}
