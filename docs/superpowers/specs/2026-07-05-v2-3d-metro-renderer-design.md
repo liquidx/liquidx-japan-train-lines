@@ -104,8 +104,9 @@ train follow-cam, basemap tiles, mobile gestures beyond what OrbitControls gives
 | `src/routes/v2/depth-config.js` | Approximate vertical profiles per 運営会社→路線名 (anchors + base depths) |
 | `src/routes/v2/geo.js` | lat/lng→local-meter projection; builds line models (joined path, arc-length table, station projection) |
 | `src/routes/v2/schedule.js` | Synthetic timetable engine: `trainsAt(lineModel, clockSeconds)` |
+| `src/routes/v2/Slider.svelte` | shadcn-svelte-style single-thumb slider (bits-ui primitive) used by the timeline scrubber |
 
-New dev dependency: `three`.
+New dev dependencies: `three`, `bits-ui`.
 
 ## Revision (same day): whole-Tokyo network
 
@@ -128,3 +129,28 @@ them out before the fog. CSS2DRenderer was removed entirely (ruler text moved
 to the same canvas; OrbitControls now attaches to the WebGL canvas). Measured:
 full-network "all stations" pass = 0.34 ms/frame (642 deduped candidates →
 ~150 drawn at bird view) vs 5.1 ms for the WebGL render.
+
+## Revision (same day): region switching, camera fit-to-selection, timeline polish
+
+Region support: the LineSelector's region grid (全国/北海道/東北/関東/東京/中部/関西/
+中国/四国/九州/沖縄, from `$lib/regions.js`) now drives v2 too. Switching regions
+disposes and rebuilds the whole scene graph (`disposeRegion`/`buildRegion`) with
+a scale fitted to the 95th-percentile station distance from the region's
+`initialView.center`, so 全国 (27k synthetic trains, 594 lines) and a single
+region both frame sensibly. `line-region-index.json` is now fetched alongside
+the two GeoJSON files.
+
+Camera: selecting a company or line now flies the camera to fit the visible
+network (`fitToVisible`, centered on the median station position with a
+95th-percentile radius so one outlying branch doesn't skew the framing) rather
+than leaving the region-wide view. All camera moves (presets and fits) animate
+over ~0.7s (`flyTo`); grabbing the OrbitControls mid-flight cancels the
+animation.
+
+Timeline: replaced the native `<input type="range">` scrubber with a
+shadcn-svelte-style `Slider.svelte` built on `bits-ui`'s headless Slider
+primitive (`type="single"`), styled to the v2 HUD rather than shadcn's default
+Tailwind tokens (which this app doesn't define). Play/pause now uses
+`@lucide/svelte`'s `Play`/`Pause` icons, matching the icons used elsewhere in
+the app. The "運行中" trains-in-service counter was removed — it re-rendered
+every frame and read as flicker rather than a useful readout.

@@ -7,6 +7,7 @@
   import { Line2 } from "three/addons/lines/Line2.js";
   import { LineGeometry } from "three/addons/lines/LineGeometry.js";
   import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+  import { Play, Pause } from "@lucide/svelte";
 
   import LineSelector from "$lib/LineSelector.svelte";
   import { LabelLayer } from "./labels.js";
@@ -36,7 +37,6 @@
   let playing = $state(true);
   let speed = $state(60);
   let clockSec = $state(7.5 * 3600);
-  let trainCount = $state(0);
   let showTrains = $state(true);
   let styleGlow = $state(false);
   let autoRotate = $state(false);
@@ -663,7 +663,6 @@
         if (k >= 1) t.camAnim = null;
       }
 
-      let total = 0;
       for (const entry of t.perLine.values()) {
         if (!entry.group.visible || !showTrains) {
           entry.trainGeom.setDrawRange(0, 0);
@@ -681,9 +680,7 @@
         });
         entry.trainGeom.attributes.position.needsUpdate = true;
         entry.trainGeom.setDrawRange(0, n);
-        total += n;
       }
-      trainCount = total;
 
       // Zoom-dependent station visibility and marker sizing (v1-style):
       // px per scene-meter at the orbit target stands in for v1's
@@ -849,8 +846,16 @@
     {#snippet footer()}
       <div class="v2-timeline">
         <div class="tl-row">
-          <button class="play" onclick={() => (playing = !playing)}>
-            {playing ? "❚❚" : "▶"}
+          <button
+            class="play"
+            onclick={() => (playing = !playing)}
+            aria-label={playing ? "一時停止" : "再生"}
+          >
+            {#if playing}
+              <Pause size={13} strokeWidth={2.5} />
+            {:else}
+              <Play size={13} strokeWidth={2.5} />
+            {/if}
           </button>
           <div class="clock">{formatClock(clockSec)}</div>
           <input
@@ -862,9 +867,6 @@
             value={clockSec}
             oninput={scrub}
           />
-          <div class="running">
-            <b>{Math.round(trainCount)}</b><span>運行中</span>
-          </div>
         </div>
         <div class="tl-row speeds">
           {#each SPEEDS as s (s)}
@@ -1093,10 +1095,12 @@
     gap: 8px;
   }
   .play {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: #eaf2ff;
-    font-size: 11px;
     cursor: pointer;
     width: 22px;
     flex: none;
@@ -1129,21 +1133,5 @@
   .speeds button.active {
     background: #1c3a66;
     color: #eaf2ff;
-  }
-  .running {
-    text-align: right;
-    flex: none;
-  }
-  .running b {
-    display: block;
-    color: #ffb144;
-    font-size: 12px;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-  .running span {
-    font-size: 8px;
-    color: #5c6c8f;
-    letter-spacing: 0.12em;
   }
 </style>
