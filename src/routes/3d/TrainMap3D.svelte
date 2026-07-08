@@ -809,13 +809,22 @@
   };
 </script>
 
-<div class="v2-root theme-dark">
-  <div class="viewport" bind:this={container}>
-    <canvas class="label-canvas" bind:this={labelCanvas}></canvas>
+<div
+  class="v2-root theme-dark fixed inset-0 overflow-hidden bg-[#04060c] text-[#dbe4f5]"
+>
+  <div class="viewport absolute inset-0" bind:this={container}>
+    <canvas
+      class="absolute inset-0 w-full h-full z-[2] pointer-events-none"
+      bind:this={labelCanvas}
+    ></canvas>
   </div>
 
   {#if regionBuilding}
-    <div class="region-loading">路線データを構築中…</div>
+    <div
+      class="absolute inset-0 z-[5] flex items-center justify-center bg-[rgba(4,6,12,0.55)] text-[#8fa1c4] text-xs tracking-[0.25em] pointer-events-none"
+    >
+      路線データを構築中…
+    </div>
   {/if}
 
   <!-- Line/company selector reused from the v1 map -->
@@ -844,10 +853,12 @@
     onreset={() => setCamera("bird")}
   >
     {#snippet footer()}
-      <div class="v2-timeline">
-        <div class="tl-row">
+      <div
+        class="border-t border-border px-2.5 py-2 flex flex-col gap-1.5 flex-none"
+      >
+        <div class="flex items-center gap-2">
           <button
-            class="play"
+            class="flex items-center justify-center bg-transparent border-none text-primary cursor-pointer w-6 flex-none"
             onclick={() => (playing = !playing)}
             aria-label={playing ? "一時停止" : "再生"}
           >
@@ -857,9 +868,13 @@
               <Play size={13} strokeWidth={2.5} />
             {/if}
           </button>
-          <div class="clock">{formatClock(clockSec)}</div>
+          <div
+            class="text-xs font-bold tabular-nums text-primary min-w-11"
+          >
+            {formatClock(clockSec)}
+          </div>
           <input
-            class="scrubber"
+            class="flex-1 min-w-0 accent-[var(--color-accent-secondary)]"
             type="range"
             min={SERVICE_START}
             max={SERVICE_END}
@@ -868,10 +883,14 @@
             oninput={scrub}
           />
         </div>
-        <div class="tl-row speeds">
+        <div class="flex items-center gap-1">
           {#each SPEEDS as s (s)}
-            <button class:active={speed === s} onclick={() => (speed = s)}
-              >×{s}</button
+            <button
+              class="flex-1 border border-border text-xxs py-1 rounded-md cursor-pointer {speed ===
+              s
+                ? 'bg-[#1c3a66] text-primary'
+                : 'bg-[var(--color-surface-soft)] text-secondary'}"
+              onclick={() => (speed = s)}>×{s}</button
             >
           {/each}
         </div>
@@ -879,78 +898,105 @@
     {/snippet}
 
     {#snippet appearanceExtra()}
-      <div class="v2-appearance">
-        <div class="section-title">DEPTH 深さ表現</div>
-        <div class="slider-row">
-          <span>強調倍率</span>
+      <div class="p-3 overflow-y-auto">
+        <div
+          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
+        >
+          DEPTH 深さ表現
+        </div>
+        <div class="flex items-center gap-2 text-xs text-secondary">
+          <span class="whitespace-nowrap">強調倍率</span>
           <input
+            class="flex-1"
             type="range"
             min="1"
             max="40"
             step="1"
             bind:value={exaggeration}
           />
-          <b>×{exaggeration}</b>
+          <b class="text-accent-secondary">×{exaggeration}</b>
         </div>
 
-        <div class="section-title">LABELS 駅名表示</div>
-        <div class="seg">
-          <button
-            class:active={labelTier === "none"}
-            onclick={() => (labelTier = "none")}>なし</button
-          >
-          <button
-            class:active={labelTier === "major"}
-            onclick={() => (labelTier = "major")}>主要駅</button
-          >
-          <button
-            class:active={labelTier === "all"}
-            onclick={() => (labelTier = "all")}>全駅</button
-          >
+        <div
+          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
+        >
+          LABELS 駅名表示
+        </div>
+        <div class="flex gap-1">
+          {#each [["none", "なし"], ["major", "主要駅"], ["all", "全駅"]] as [tier, label] (tier)}
+            <button
+              class="flex-1 border border-border text-xs py-1 rounded-md cursor-pointer {labelTier ===
+              tier
+                ? 'bg-[#1c3a66] text-primary'
+                : 'bg-[var(--color-surface-soft)] text-secondary'}"
+              onclick={() => (labelTier = tier)}>{label}</button
+            >
+          {/each}
         </div>
 
-        <div class="section-title">STATIONS 駅表示</div>
-        <label class="toggle-row"
+        <div
+          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
+        >
+          STATIONS 駅表示
+        </div>
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={forceShowStations} /> ズームに関係なく表示</label
         >
-        <div class="slider-row">
-          <span>サイズ</span>
+        <div class="flex items-center gap-2 text-xs text-secondary">
+          <span class="whitespace-nowrap">サイズ</span>
           <input
+            class="flex-1"
             type="range"
             min="0.5"
             max="3"
             step="0.1"
             bind:value={stationSizeMultiplier}
           />
-          <b>×{stationSizeMultiplier.toFixed(1)}</b>
+          <b class="text-accent-secondary">×{stationSizeMultiplier.toFixed(1)}</b>
         </div>
 
-        <div class="section-title">DISPLAY 表示</div>
-        <label class="toggle-row"
+        <div
+          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
+        >
+          DISPLAY 表示
+        </div>
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={showTrains} /> 列車の運行</label
         >
-        <label class="toggle-row"
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={styleGlow} /> グロー効果</label
         >
-        <label class="toggle-row"
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={autoRotate} /> 自動回転</label
         >
-        <label class="toggle-row"
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={showPillars} /> 模型支柱（地上との接続）</label
         >
-        <label class="toggle-row"
+        <label
+          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
           ><input type="checkbox" bind:checked={showGrid} /> 地上グリッド</label
         >
 
-        <div class="section-title">CAMERA 視点</div>
-        <div class="cam-grid">
-          <button onclick={() => setCamera("bird")}>鳥瞰</button>
-          <button onclick={() => setCamera("top")}>真上</button>
-          <button onclick={() => setCamera("side")}>断面（横）</button>
-          <button onclick={() => setCamera("below")}>地底から</button>
+        <div
+          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
+        >
+          CAMERA 視点
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          {#each [["bird", "鳥瞰"], ["top", "真上"], ["side", "断面（横）"], ["below", "地底から"]] as [preset, label] (preset)}
+            <button
+              class="bg-[var(--color-surface-soft)] border border-border text-secondary text-xs py-2 rounded-lg cursor-pointer hover:bg-[var(--color-surface-hover)]"
+              onclick={() => setCamera(preset)}>{label}</button
+            >
+          {/each}
         </div>
 
-        <div class="footnote">
+        <div class="mt-3.5 text-xxs leading-relaxed text-very-muted">
           深さは概算値（実測データではありません）。ダイヤは合成。 データ:
           国土数値情報 (N02-19)
         </div>
@@ -958,180 +1004,3 @@
     {/snippet}
   </LineSelector>
 </div>
-
-<style>
-  .v2-root {
-    position: fixed;
-    inset: 0;
-    background: #04060c;
-    color: #dbe4f5;
-    font-family:
-      "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-    overflow: hidden;
-  }
-  .viewport {
-    position: absolute;
-    inset: 0;
-  }
-  .viewport :global(canvas) {
-    display: block;
-  }
-  .label-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .region-loading {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(4, 6, 12, 0.55);
-    color: #8fa1c4;
-    font-size: 12px;
-    letter-spacing: 0.25em;
-    pointer-events: none;
-  }
-
-  /* 3D controls inside the LineSelector appearance tab */
-  .v2-appearance {
-    padding: 12px;
-    overflow-y: auto;
-  }
-  .section-title {
-    font-size: 9px;
-    letter-spacing: 0.25em;
-    color: #5c6c8f;
-    margin: 14px 0 6px;
-  }
-  .section-title:first-child {
-    margin-top: 0;
-  }
-  .slider-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 10px;
-    color: #8fa1c4;
-  }
-  .slider-row span {
-    white-space: nowrap;
-  }
-  .slider-row input {
-    flex: 1;
-  }
-  .slider-row b {
-    color: #4da3ff;
-  }
-  .seg {
-    display: flex;
-    gap: 4px;
-  }
-  .seg button {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #8fa1c4;
-    font-size: 10px;
-    padding: 4px 0;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  .seg button.active {
-    background: #1c3a66;
-    color: #eaf2ff;
-    border-color: #2f5a9b;
-  }
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: #c3cfe6;
-    padding: 3px 0;
-    cursor: pointer;
-  }
-  .cam-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-  .cam-grid button {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #c3cfe6;
-    font-size: 11px;
-    padding: 7px 0;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  .cam-grid button:hover {
-    background: rgba(255, 255, 255, 0.09);
-  }
-  .footnote {
-    margin-top: 14px;
-    font-size: 9px;
-    line-height: 1.6;
-    color: #4a587a;
-  }
-
-  /* Timeline row inside the LineSelector panel (visible when collapsed) */
-  .v2-timeline {
-    border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: none;
-  }
-  .tl-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .play {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: #eaf2ff;
-    cursor: pointer;
-    width: 22px;
-    flex: none;
-  }
-  .clock {
-    font-size: 15px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: #f4f7ff;
-    min-width: 44px;
-  }
-  .scrubber {
-    flex: 1;
-    min-width: 0;
-    accent-color: #4da3ff;
-  }
-  .speeds {
-    gap: 4px;
-  }
-  .speeds button {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #8fa1c4;
-    font-size: 10px;
-    padding: 3px 0;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  .speeds button.active {
-    background: #1c3a66;
-    color: #eaf2ff;
-  }
-</style>
