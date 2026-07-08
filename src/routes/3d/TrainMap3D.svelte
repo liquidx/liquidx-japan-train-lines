@@ -7,22 +7,17 @@
   import { Line2 } from "three/addons/lines/Line2.js";
   import { LineGeometry } from "three/addons/lines/LineGeometry.js";
   import { LineMaterial } from "three/addons/lines/LineMaterial.js";
-  import { Play, Pause } from "@lucide/svelte";
 
   import LineSelector from "$lib/LineSelector.svelte";
+  import TimelineControls from "./TimelineControls.svelte";
+  import AppearanceControls from "./AppearanceControls.svelte";
   import { LabelLayer } from "./labels.js";
   import { getTokyoGeoJson } from "$lib/japan-train-lines.js";
   import { getLineColor } from "$lib/line-colors.js";
   import { regions } from "$lib/regions.js";
   import { CLIP_RADIUS_M, depthForLine } from "./depth-config.js";
   import { makeProjector, buildLineModel, pointAt } from "./geo.js";
-  import {
-    trainsAt,
-    maxTrains,
-    formatClock,
-    SERVICE_START,
-    SERVICE_END,
-  } from "./schedule.js";
+  import { trainsAt, maxTrains, SERVICE_START, SERVICE_END } from "./schedule.js";
 
   let { railroadGeoJson, stationGeoJson, lineRegionIndex = null } = $props();
 
@@ -52,7 +47,6 @@
   const STATION_SHOW_PX_PER_M = 0.045;
   const TRAIN_BASE_PX_PER_M = 0.032; // px/m at the default bird view
 
-  const SPEEDS = [1, 60, 120, 300, 600];
   const FALLBACK_COLOR = "#7c8db0";
   const PRIORITY_COMPANIES = ["東日本旅客鉄道", "東京地下鉄", "東京都"];
 
@@ -803,10 +797,6 @@
       .multiplyScalar(factor)
       .add(controls.target);
   };
-
-  const scrub = (e) => {
-    clockSec = Number(e.target.value);
-  };
 </script>
 
 <div
@@ -853,154 +843,22 @@
     onreset={() => setCamera("bird")}
   >
     {#snippet footer()}
-      <div
-        class="border-t border-border px-2.5 py-2 flex flex-col gap-1.5 flex-none"
-      >
-        <div class="flex items-center gap-2">
-          <button
-            class="flex items-center justify-center bg-transparent border-none text-primary cursor-pointer w-6 flex-none"
-            onclick={() => (playing = !playing)}
-            aria-label={playing ? "一時停止" : "再生"}
-          >
-            {#if playing}
-              <Pause size={13} strokeWidth={2.5} />
-            {:else}
-              <Play size={13} strokeWidth={2.5} />
-            {/if}
-          </button>
-          <div
-            class="text-xs font-bold tabular-nums text-primary min-w-11"
-          >
-            {formatClock(clockSec)}
-          </div>
-          <input
-            class="flex-1 min-w-0 accent-[var(--color-accent-secondary)]"
-            type="range"
-            min={SERVICE_START}
-            max={SERVICE_END}
-            step="60"
-            value={clockSec}
-            oninput={scrub}
-          />
-        </div>
-        <div class="flex items-center gap-1">
-          {#each SPEEDS as s (s)}
-            <button
-              class="flex-1 border border-border text-xxs py-1 rounded-md cursor-pointer {speed ===
-              s
-                ? 'bg-[#1c3a66] text-primary'
-                : 'bg-[var(--color-surface-soft)] text-secondary'}"
-              onclick={() => (speed = s)}>×{s}</button
-            >
-          {/each}
-        </div>
-      </div>
+      <TimelineControls bind:playing bind:clockSec bind:speed />
     {/snippet}
 
     {#snippet appearanceExtra()}
-      <div class="p-3 overflow-y-auto">
-        <div
-          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
-        >
-          DEPTH 深さ表現
-        </div>
-        <div class="flex items-center gap-2 text-xs text-secondary">
-          <span class="whitespace-nowrap">強調倍率</span>
-          <input
-            class="flex-1"
-            type="range"
-            min="1"
-            max="40"
-            step="1"
-            bind:value={exaggeration}
-          />
-          <b class="text-accent-secondary">×{exaggeration}</b>
-        </div>
-
-        <div
-          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
-        >
-          LABELS 駅名表示
-        </div>
-        <div class="flex gap-1">
-          {#each [["none", "なし"], ["major", "主要駅"], ["all", "全駅"]] as [tier, label] (tier)}
-            <button
-              class="flex-1 border border-border text-xs py-1 rounded-md cursor-pointer {labelTier ===
-              tier
-                ? 'bg-[#1c3a66] text-primary'
-                : 'bg-[var(--color-surface-soft)] text-secondary'}"
-              onclick={() => (labelTier = tier)}>{label}</button
-            >
-          {/each}
-        </div>
-
-        <div
-          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
-        >
-          STATIONS 駅表示
-        </div>
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={forceShowStations} /> ズームに関係なく表示</label
-        >
-        <div class="flex items-center gap-2 text-xs text-secondary">
-          <span class="whitespace-nowrap">サイズ</span>
-          <input
-            class="flex-1"
-            type="range"
-            min="0.5"
-            max="3"
-            step="0.1"
-            bind:value={stationSizeMultiplier}
-          />
-          <b class="text-accent-secondary">×{stationSizeMultiplier.toFixed(1)}</b>
-        </div>
-
-        <div
-          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
-        >
-          DISPLAY 表示
-        </div>
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={showTrains} /> 列車の運行</label
-        >
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={styleGlow} /> グロー効果</label
-        >
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={autoRotate} /> 自動回転</label
-        >
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={showPillars} /> 模型支柱（地上との接続）</label
-        >
-        <label
-          class="flex items-center gap-2 text-xs text-secondary py-1 cursor-pointer"
-          ><input type="checkbox" bind:checked={showGrid} /> 地上グリッド</label
-        >
-
-        <div
-          class="text-xxs tracking-[0.25em] text-muted mt-3.5 mb-1.5 first:mt-0"
-        >
-          CAMERA 視点
-        </div>
-        <div class="grid grid-cols-2 gap-1.5">
-          {#each [["bird", "鳥瞰"], ["top", "真上"], ["side", "断面（横）"], ["below", "地底から"]] as [preset, label] (preset)}
-            <button
-              class="bg-[var(--color-surface-soft)] border border-border text-secondary text-xs py-2 rounded-lg cursor-pointer hover:bg-[var(--color-surface-hover)]"
-              onclick={() => setCamera(preset)}>{label}</button
-            >
-          {/each}
-        </div>
-
-        <div class="mt-3.5 text-xxs leading-relaxed text-very-muted">
-          深さは概算値（実測データではありません）。ダイヤは合成。 データ:
-          国土数値情報 (N02-19)
-        </div>
-      </div>
+      <AppearanceControls
+        bind:exaggeration
+        bind:labelTier
+        bind:forceShowStations
+        bind:stationSizeMultiplier
+        bind:showTrains
+        bind:styleGlow
+        bind:autoRotate
+        bind:showPillars
+        bind:showGrid
+        onsetcamera={setCamera}
+      />
     {/snippet}
   </LineSelector>
 </div>
